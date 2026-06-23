@@ -1,24 +1,29 @@
 const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
-const connectDB = require('./config/db'); // Import our new database connection function
+const dotenv = require('dotenv');
+const connectDB = require('./config/db');
+const productRoutes = require('./routes/productRoutes'); // <-- 1. Import the routes
 
-const app = express();
+// Load environment variables
+dotenv.config();
 
 // Connect to MongoDB
 connectDB();
 
-// Middleware
-app.use(cors());
-app.use(express.json()); // Allows us to accept JSON data in the body
+const app = express();
 
-// Basic test route
+// Middleware to parse JSON data
+app.use(express.json());
+
+// 2. Mount the routes to the specific URL path
+app.use('/api/products', productRoutes); 
+
+// A simple test route for the root URL
 app.get('/', (req, res) => {
-  res.send('Delivery App Backend is running!');
+  res.send('API is running...');
 });
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
