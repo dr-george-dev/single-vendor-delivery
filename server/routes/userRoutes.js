@@ -3,12 +3,15 @@ const router = express.Router();
 const {
   registerUser,
   loginUser,
+  getUserProfile, // <-- 1. Import profile controller
 } = require('../controllers/userController');
+const { protect } = require('../middleware/authMiddleware'); // <-- 2. Import security middleware
 
-// Route for register (POST /api/users)
+// Public routes
 router.post('/', registerUser);
-
-// Route for login (POST /api/users/login)
 router.post('/login', loginUser);
+
+// Protected routes (Only authorized users with valid JWTs can hit this)
+router.route('/profile').get(protect, getUserProfile);
 
 module.exports = router;
