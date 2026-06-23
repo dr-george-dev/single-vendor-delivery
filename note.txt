@@ -1,0 +1,15 @@
+I'd be happy to document our progress!
+
+Looking at the code you've selected in the Canvas, here is a brief, educational summary of exactly what we've accomplished so far in our backend journey (Days 1 through 3):
+
+1. **Setup & Connection (Days 1 & 2):** We initialized a Node.js server, installed Express to handle web traffic, and successfully connected our app to a MongoDB database using a configuration file.
+2. **Data Modeling (Day 3 - Current Canvas):** Because MongoDB is a "NoSQL" database (meaning it doesn't strictly enforce rules by default), we use a tool called **Mongoose** to create strict blueprints for our data. The code in the Canvas is our first blueprint: the `User` schema.
+3. **Anatomy of the User Schema:**
+* **Validation:** We've enforced that every user *must* provide a `name`, `email`, and `password`.
+* **Data Integrity:** The `unique: true` property ensures no two people can sign up with the exact same email. We also added a Regular Expression (`match`) to ensure the email is actually formatted correctly (e.g., contains an `@` and a domain).
+* **Access Control (Roles):** By setting an `enum` for the `role`, we are telling the database: "Only accept 'customer', 'admin', or 'driver' as valid roles." It defaults to 'customer' so normal users don't accidentally get admin privileges when signing up.
+* **Timestamps:** Passing `{ timestamps: true }` at the end is a pro-move. Mongoose will automatically inject `createdAt` and `updatedAt` dates into every user document, saving us from having to write that logic manually.
+
+
+
+In short, we've laid the foundation and created the strict security rules for how human beings will exist in your database! Let me know when you are ready to tackle Day 4: The Product Schema.
