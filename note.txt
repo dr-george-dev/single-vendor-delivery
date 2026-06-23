@@ -13,3 +13,5 @@ Looking at the code you've selected in the Canvas, here is a brief, educational 
 
 
 In short, we've laid the foundation and created the strict security rules for how human beings will exist in your database! Let me know when you are ready to tackle Day 4: The Product Schema.
+
+Full meaning of CORS (Cross-Origin Resource Sharing)
