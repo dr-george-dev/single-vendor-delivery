@@ -1,36 +1,76 @@
-import { useState } from "react";
-import { View, Text, Image, TouchableOpacity, ScrollView } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useCartStore } from "../../store/cartStore"; // <-- 1. Import our global store
+import { useCartStore } from "../../store/cartStore";
 
-// Dummy data (We will replace this with a backend API fetch in Day 24)
-const dummyProducts = [
-  { id: "1", name: "Classic Cheeseburger", price: 8.99, rating: 4.8, prepTime: "10-15 min", calories: "650 Kcal", description: "A juicy, 100% beef patty topped with melted American cheese...", image: "https://cdn-icons-png.flaticon.com/512/3075/3075977.png" },
-  { id: "2", name: "Pepperoni Pizza", price: 12.99, rating: 4.9, prepTime: "20-25 min", calories: "950 Kcal", description: "Freshly baked pizza loaded with premium pepperoni slices...", image: "https://cdn-icons-png.flaticon.com/512/3595/3595458.png" },
-];
+// 🚨 IMPORTANT: Replace 192.168.x.x with your actual computer's Wi-Fi IPv4 address!
+const API_URL = Platform.OS === 'android' 
+  ? "http://10.0.2.2:5000/api/products" 
+  : "http://192.168.1.9:5000/api/products";
 
 export default function ProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams(); 
-  const product = dummyProducts.find(p => p.id === id) || dummyProducts[0];
-
-  // 2. Bring in the addItem function from Zustand
   const addItem = useCartStore((state: any) => state.addItem);
 
-  // Local state just for tracking the UI counter before adding to cart
+  // New state variables for API data
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [quantity, setQuantity] = useState(1);
+
+  // Fetch the single product from MongoDB when the screen loads
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await fetch(`${API_URL}/${id}`);
+        if (!response.ok) throw new Error("Product not found");
+        const data = await response.json();
+        setProduct(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (id) fetchProduct();
+  }, [id]);
+
   const increment = () => setQuantity(prev => prev + 1);
   const decrement = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
 
   const handleAddToCart = () => {
-    // 3. Save the item and quantity to our global store, then navigate
     addItem(product, quantity);
     router.push('/cart');
   };
 
+  // Loading UI
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <ActivityIndicator size="large" color="#f97316" />
+      </SafeAreaView>
+    );
+  }
+
+  // Error UI
+  if (error || !product) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <Text className="text-red-500 font-bold mb-4">Error: {error || "Product not found"}</Text>
+        <TouchableOpacity onPress={() => router.back()} className="bg-orange-500 px-6 py-3 rounded-full">
+          <Text className="text-white font-bold">Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-white">
+      {/* Header */}
       <View className="px-6 py-4 flex-row items-center justify-between z-10">
         <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
           <Text className="text-xl">←</Text>
@@ -58,11 +98,11 @@ export default function ProductDetailScreen() {
           <View className="flex-row mt-4 mb-6">
             <View className="flex-row items-center mr-6">
               <Text className="text-orange-500 mr-2 text-lg">🔥</Text>
-              <Text className="text-gray-500 font-medium">{product.calories}</Text>
+              <Text className="text-gray-500 font-medium">{product.calories || 'N/A'} Kcal</Text>
             </View>
             <View className="flex-row items-center">
               <Text className="text-orange-500 mr-2 text-lg">⏱️</Text>
-              <Text className="text-gray-500 font-medium">{product.prepTime}</Text>
+              <Text className="text-gray-500 font-medium">{product.prepTime} min</Text>
             </View>
           </View>
 
@@ -82,7 +122,7 @@ export default function ProductDetailScreen() {
         </View>
 
         <TouchableOpacity 
-          onPress={handleAddToCart} // <-- 4. Attach our handler here
+          onPress={handleAddToCart}
           className="bg-orange-500 flex-1 ml-6 h-14 rounded-full items-center justify-center flex-row shadow-sm"
         >
           <Text className="text-white font-bold text-lg mr-2">Add to Cart</Text>
