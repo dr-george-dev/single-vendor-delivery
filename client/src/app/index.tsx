@@ -7,7 +7,9 @@ import { useAuthStore } from "../store/authStore";
 
 const API_URL = Platform.OS === 'android' 
   ? "http://10.0.2.2:5000/api/products" 
-  : "http://192.168.1.9:5000/api/products"; // Replace with your IP!
+  : Platform.OS === 'web'
+    ? "http://localhost:5000/api/products"
+    : "http://192.168.1.9:5000/api/products"; // Replace with your IP!
 
 const categories = [
   { name: "Burgers", icon: "🍔", active: true },
