@@ -94,8 +94,31 @@ const getOrders = async (req, res) => {
   }
 };
 
+// @desc    Get order by ID
+// @route   GET /api/orders/:id
+// @access  Private
+const getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id).populate('user', 'name email');
+    
+    if (order) {
+      // Ensure the order belongs to the logged-in user (or is an admin)
+      if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      res.json(order);
+    } else {
+      res.status(404).json({ message: 'Order not found' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error retrieving order' });
+  }
+};
+
 module.exports = {
   addOrderItems,
   getMyOrders,
   getOrders,
+  getOrderById,
 };

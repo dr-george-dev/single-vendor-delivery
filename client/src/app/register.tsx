@@ -15,8 +15,7 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     if (!name || !email || !password) return;
     const success = await register(name, email, password);
-    // If registration is successful, the user is automatically logged in and gets a token!
-    if (success) router.push('/'); // Send them to the Home screen
+    if (success) router.replace('/');
   };
 
   return (

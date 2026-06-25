@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,6 +8,12 @@ import { useAuthStore } from "../store/authStore";
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore((state: any) => state);
+
+  useEffect(() => {
+    if (!user) {
+      router.replace('/login');
+    }
+  }, [user, router]);
 
   const handleLogout = () => {
     Alert.alert("Log Out", "Are you sure you want to log out?", [

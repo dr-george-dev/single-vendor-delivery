@@ -116,3 +116,103 @@ This document outlines the daily milestones for building a full-stack ordering a
 
 - [ ] **Day 30:** README & Documentation. Create a polished `README.md` with screenshots, tech stack details, and local setup instructions.
   - Commit: `docs: write comprehensive README and project documentation`
+
+
+
+## Concrete Implementation Plan
+
+This section turns the roadmap into issue-level tasks with target files and implementation notes.
+
+### Phase 1 – Core user experience
+
+1. **Add Profile / Account Center**
+   - Create `client/src/app/profile.tsx` for view/edit profile.
+   - Update `client/src/store/authStore.ts` with `loadProfile` and `logout` actions.
+   - Wire `/api/users/profile` in `server/routes/userRoutes.js` and `server/controllers/userController.js` (already present).
+   - Persist token and user data with `expo-secure-store` in `client/src/store/authStore.ts`.
+   - Add profile navigation from `client/src/app/_layout.tsx` or bottom bar.
+
+2. **Search + Filtering**
+   - Use `client/src/app/index.tsx` search bar to filter `products` state.
+   - Add category state and filter logic in `index.tsx`.
+   - Optional: create `client/src/components/ProductFilterBar.tsx`.
+   - Implement sorting options with UI in `index.tsx` or a new component.
+
+3. **Order Detail Flow**
+   - Create `client/src/app/order/[id].tsx` and `client/src/app/order.tsx` screen(s).
+   - Fetch order by ID using a new backend route, e.g. `GET /api/orders/:id` in `server/routes/orderRoutes.js` and `server/controllers/orderController.js`.
+   - Add “Reorder” button to call existing cart logic.
+
+### Phase 2 – Checkout & payment improvements
+
+4. **Real Checkout Form**
+   - Replace hard-coded address in `client/src/app/cart.tsx` with address picker or form.
+   - Add `client/src/app/addresses.tsx` or in-cart address section.
+   - Update order payload to send selected address and payment method.
+
+5. **Payment Integration**
+   - Add Stripe or payment gateway on backend, e.g. `server/controllers/paymentController.js`.
+   - Create checkout session endpoint and verify payment success before saving order.
+   - Update `client/src/app/cart.tsx` to call payment flow and handle success/failure.
+
+6. **Cart Persistence**
+   - Extend `client/src/store/cartStore.ts` to persist `items` in `expo-secure-store` or `AsyncStorage`.
+   - Load persisted cart on app start in `cartStore.ts`.
+   - Keep cart and subtotal synced automatically.
+
+### Phase 3 – Retention & polish
+
+7. **Favorites / Wishlist**
+   - Add `favorite` prop to product models or separate wishlist endpoint.
+   - Create `client/src/app/favorites.tsx` and add save buttons in `index.tsx`/`product/[id].tsx`.
+   - Add backend support in `server/routes/userRoutes.js` for `/api/users/favorites` if persisted server-side.
+
+8. **Notifications / Order Updates**
+   - Add push notifications using Expo Push Notifications or local in-app alerts.
+   - Use order status changes from `server/models/Order.js` and trigger updates.
+   - Add UI state in `client/src/app/orders.tsx` and `client/src/store/authStore.ts` or a separate `notificationStore.ts`.
+
+9. **Profile Edit / Saved Data**
+   - Add editable fields in `client/src/app/profile.tsx`.
+   - Create `PUT /api/users/profile` route in `server/routes/userRoutes.js` and controller logic in `server/controllers/userController.js`.
+   - Persist delivery address and payment preferences in user model or separate schema.
+
+### Phase 4 – Growth & backend maturity
+
+10. **Admin / Product Management**
+    - Add admin-only endpoints in `server/routes/productRoutes.js` for create/update/delete.
+    - Create a protected admin UI section in `client/src/app/admin/`.
+    - Add role-check middleware in `server/middleware/authMiddleware.js`.
+
+11. **Role-based Access**
+    - Extend `server/models/User.js` with roles and add role guard middleware.
+    - Adjust route protection in `server/routes/orderRoutes.js` and `server/routes/userRoutes.js`.
+    - Show different screens in `client/src/app/_layout.tsx` based on role.
+
+12. **Internationalization / Accessibility**
+    - Add localization support via `i18n-js` or `react-intl` in `client/src/i18n`.
+    - Improve empty states and screen labels across `client/src/app/*`.
+    - Ensure accessible text and button labels in UI components.
+
+### Suggested Issue Breakdown
+
+- `ISSUE 1:` Add profile screen and auth persistence
+- `ISSUE 2:` Wire search and category filtering on Home screen
+- `ISSUE 3:` Add order detail route and reorder support
+- `ISSUE 4:` Replace hard-coded checkout data with real form fields
+- `ISSUE 5:` Integrate payment gateway and verify payments before order creation
+- `ISSUE 6:` Persist cart state locally across app restarts
+- `ISSUE 7:` Add favorites/wishlist support
+- `ISSUE 8:` Add push notification support for order status
+- `ISSUE 9:` Create admin product CRUD and role-based access
+- `ISSUE 10:` Add localization and UI accessibility improvements
+
+### Work Plan Notes
+
+- Prioritize Phase 1 and Phase 2 first for product completeness.
+- Phase 3 is high-value polish that improves retention and UX.
+- Phase 4 is optional but important for mature app parity and admin operations.
+
+---
+
+> This plan is now ready to use as a task list for implementation or issue creation.

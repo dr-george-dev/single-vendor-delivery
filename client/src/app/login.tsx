@@ -14,7 +14,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!email || !password) return;
     const success = await login(email, password);
-    if (success) router.back();
+    if (success) router.replace('/');
   };
 
   return (

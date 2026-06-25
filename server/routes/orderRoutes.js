@@ -4,6 +4,7 @@ const {
   addOrderItems,
   getMyOrders,
   getOrders,
+  getOrderById
 } = require('../controllers/orderController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -15,5 +16,7 @@ router.route('/')
 
 // Route for getting the logged-in user's orders (GET /api/orders/myorders)
 router.route('/myorders').get(protect, getMyOrders);
+
+router.route('/:id').get(protect, getOrderById);
 
 module.exports = router;

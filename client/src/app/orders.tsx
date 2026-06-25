@@ -9,14 +9,13 @@ const API_URL = `${API_BASE_URL}/api/orders/myorders`;
 
 export default function OrdersScreen() {
   const router = useRouter();
-  const { token, user } = useAuthStore((state: any) => state);
+  const { token } = useAuthStore((state: any) => state);
   
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // If not logged in, boot them to login screen
     if (!token) {
       router.replace('/login');
       return;

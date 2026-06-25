@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity, Animated } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from '@expo/vector-icons';
 
 export default function SuccessScreen() {
   const router = useRouter();
+  // We capture the orderId passed when navigating to this screen
+  const { orderId } = useLocalSearchParams();
   
   // Animation for the checkmark to pop in
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -26,11 +28,9 @@ export default function SuccessScreen() {
         style={{ transform: [{ scale: scaleAnim }], opacity: opacityAnim }}
         className="mb-10 relative items-center justify-center"
       >
-        {/* Outer decorative circles */}
         <View className="absolute w-48 h-48 rounded-full border border-green-200" />
         <View className="absolute w-36 h-36 rounded-full border border-green-300" />
         
-        {/* Main Checkmark circle */}
         <View className="bg-[#10b981] w-24 h-24 rounded-full items-center justify-center shadow-lg shadow-green-200">
           <Feather name="check" size={48} color="white" />
         </View>
@@ -52,7 +52,8 @@ export default function SuccessScreen() {
             </View>
             <Text className="text-gray-500 font-medium">Order ID</Text>
           </View>
-          <Text className="text-gray-900 font-bold">#FD-2847</Text>
+          {/* Displays the dynamic order ID */}
+          <Text className="text-gray-900 font-bold">#{orderId ? orderId.toString().slice(-6) : "..."}</Text>
         </View>
 
         <View className="flex-row justify-between items-center mb-4 border-b border-gray-100 pb-4">
@@ -76,13 +77,16 @@ export default function SuccessScreen() {
         </View>
       </View>
 
-      {/* Buttons */}
-      <TouchableOpacity className="bg-[#1a1c1e] w-full h-16 rounded-full items-center justify-center flex-row shadow-md mb-4">
-        <Feather name="navigation" size={20} color="white" className="mr-2" />
+      {/* Buttons: Navigate to the dynamic Order Detail page */}
+      <TouchableOpacity 
+        onPress={() => router.push(`/order/${orderId}`)} 
+        className="bg-[#1a1c1e] w-full h-16 rounded-full items-center justify-center flex-row shadow-md mb-4"
+      >
+        <Feather name="navigation" size={20} color="white" />
         <Text className="text-white font-extrabold text-lg ml-2">Track my order</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push('/')} className="py-4">
+      <TouchableOpacity onPress={() => router.replace('/')} className="py-4">
         <Text className="text-gray-500 font-bold text-base">Back to home</Text>
       </TouchableOpacity>
       
