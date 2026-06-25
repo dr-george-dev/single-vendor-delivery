@@ -69,7 +69,7 @@ export default function HomeScreen() {
           </View>
           
           <TouchableOpacity 
-            onPress={() => router.push(token ? '/orders' : '/login')}
+            onPress={() => router.push(token ? '/profile' : '/login')}
             className="w-12 h-12 bg-red-100 rounded-full items-center justify-center border-2 border-white shadow-sm relative"
           >
             <Text className="text-xl font-bold text-red-600">Z</Text>
@@ -194,7 +194,7 @@ export default function HomeScreen() {
         <TouchableOpacity onPress={() => router.push('/cart')} className="items-center opacity-40">
           <Feather name="shopping-bag" size={24} color="#1a1c1e" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push(token ? '/orders' : '/login')} className="items-center opacity-40">
+        <TouchableOpacity onPress={() => router.push(token ? '/profile' : '/login')} className="items-center opacity-40">
           <Feather name="user" size={24} color="#1a1c1e" />
         </TouchableOpacity>
       </View>
