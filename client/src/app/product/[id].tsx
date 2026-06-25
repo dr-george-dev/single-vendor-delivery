@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
-import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from "react-native";
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCartStore } from "../../store/cartStore";
+import { API_BASE_URL } from "../../config/api";
 
-// 🚨 IMPORTANT: Replace 192.168.x.x with your actual computer's Wi-Fi IPv4 address!
-const API_URL = Platform.OS === 'android' 
-  ? "http://10.0.2.2:5000/api/products" 
-  : "http://192.168.1.9:5000/api/products";
+const API_URL = `${API_BASE_URL}/api/products`;
 
 export default function ProductDetailScreen() {
   const router = useRouter();

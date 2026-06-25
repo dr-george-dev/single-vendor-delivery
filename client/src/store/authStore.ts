@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { API_BASE_URL } from '../config/api';
 
-// 🚨 REMEMBER: Replace with your actual computer's Wi-Fi IPv4 address!
-const API_URL = "http://192.168.1.9:5000/api/users";
+const API_URL = `${API_BASE_URL}/api/users`;
 
 export const useAuthStore = create((set) => ({
   user: null,

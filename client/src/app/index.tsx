@@ -4,12 +4,9 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from "../store/authStore";
+import { API_BASE_URL } from "../config/api";
 
-const API_URL = Platform.OS === 'android' 
-  ? "http://10.0.2.2:5000/api/products" 
-  : Platform.OS === 'web'
-    ? "http://localhost:5000/api/products"
-    : "http://192.168.1.9:5000/api/products"; // Replace with your IP!
+const API_URL = `${API_BASE_URL}/api/products`;
 
 const categories = [
   { name: "Burgers", icon: "🍔", active: true },
@@ -25,6 +22,7 @@ export default function HomeScreen() {
   
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -42,11 +40,17 @@ export default function HomeScreen() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      setFetchError(null);
       const response = await fetch(API_URL);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Fetch failed: ${response.status} ${response.statusText} — ${errorText}`);
+      }
       const data = await response.json();
       setProducts(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setFetchError(err.message || 'Unknown error fetching products');
     } finally {
       setLoading(false);
     }
@@ -136,12 +140,17 @@ export default function HomeScreen() {
             
             {loading ? (
               <ActivityIndicator size="large" color="#f97316" className="mt-10" />
+            ) : fetchError ? (
+              <View className="py-10 px-4 rounded-3xl bg-red-50 border border-red-200">
+                <Text className="text-red-600 font-bold text-center">Unable to load products</Text>
+                <Text className="text-red-500 text-sm text-center mt-2">{fetchError}</Text>
+              </View>
             ) : (
               <View className="flex-row flex-wrap justify-between">
                 {products.map((product: any) => (
                   <TouchableOpacity
-                    key={product._id}
-                    onPress={() => router.push(`/product/${product._id}`)}
+                    key={product._id ?? product.id}
+                    onPress={() => router.push(`/product/${product._id ?? product.id}`)}
                     className="bg-white p-4 rounded-[28px] w-[48%] mb-4 shadow-sm border border-gray-100"
                   >
                     <View className="absolute top-4 right-4 z-10 bg-white/80 p-1.5 rounded-full">

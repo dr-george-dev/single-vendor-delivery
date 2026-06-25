@@ -5,8 +5,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useCartStore } from "../store/cartStore";
 import { useAuthStore } from "../store/authStore";
+import { API_BASE_URL } from "../config/api";
 
-const API_URL = "http://192.168.1.9:5000/api/orders"; // Replace with your IP!
+const API_URL = `${API_BASE_URL}/api/orders`;
 
 export default function CartScreen() {
   const router = useRouter();
