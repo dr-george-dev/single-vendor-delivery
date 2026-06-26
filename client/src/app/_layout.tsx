@@ -16,10 +16,14 @@ export default function RootLayout() {
     // We set headerShown to false because we will build our own custom beautiful headers!
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="product/[id]" />
+      {/* Set presentation to modal for the slide-up bottom sheet effect */}
+      <Stack.Screen 
+        name="product/[id]" 
+        options={{ presentation: 'modal' }} 
+      />
       <Stack.Screen name="cart" />
       <Stack.Screen name="orders" />
-      <Stack.Screen name="profile" /> {/* <-- Added the new profile screen! */}
+      <Stack.Screen name="profile" />
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
       <Stack.Screen name="success" />
