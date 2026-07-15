@@ -77,16 +77,36 @@ const getMyOrders = async (req, res) => {
   }
 };
 
-// @desc    Get all orders (Admin only)
+// Allowed kitchen workflow statuses (must match Order model enum)
+const VALID_STATUSES = ['Pending', 'Preparing', 'Out for Delivery', 'Delivered'];
+
+// Natural next step for one-tap "Advance" on the kitchen board
+const NEXT_STATUS = {
+  Pending: 'Preparing',
+  Preparing: 'Out for Delivery',
+  'Out for Delivery': 'Delivered',
+  Delivered: null,
+};
+
+// @desc    Get all orders (Kitchen board)
 // @route   GET /api/orders
 // @access  Private/Admin
+// @query   status=Pending|Preparing|...  (optional filter)
+// @query   active=true                   (optional: exclude Delivered)
 const getOrders = async (req, res) => {
   try {
-    // Find all orders in the system, populate user details (name and email)
-    const orders = await Order.find({})
+    const filter = {};
+
+    if (req.query.status && VALID_STATUSES.includes(req.query.status)) {
+      filter.status = req.query.status;
+    } else if (req.query.active === 'true') {
+      filter.status = { $ne: 'Delivered' };
+    }
+
+    const orders = await Order.find(filter)
       .populate('user', 'name email')
       .sort({ createdAt: -1 });
-      
+
     res.json(orders);
   } catch (error) {
     console.error(error);
@@ -96,23 +116,70 @@ const getOrders = async (req, res) => {
 
 // @desc    Get order by ID
 // @route   GET /api/orders/:id
-// @access  Private
+// @access  Private (owner or admin)
 const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate('user', 'name email');
-    
-    if (order) {
-      // Ensure the order belongs to the logged-in user (or is an admin)
-      if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Not authorized' });
-      }
-      res.json(order);
-    } else {
-      res.status(404).json({ message: 'Order not found' });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
     }
+
+    const isOwner =
+      order.user &&
+      order.user._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    res.json(order);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error retrieving order' });
+  }
+};
+
+// @desc    Update order status (Kitchen board)
+// @route   PUT /api/orders/:id/status
+// @access  Private/Admin
+// Body: { status: "Preparing" }  OR  { advance: true } to move to next step
+const updateOrderStatus = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id).populate('user', 'name email');
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    let nextStatus = req.body.status;
+
+    // One-tap advance: Pending → Preparing → Out for Delivery → Delivered
+    if (req.body.advance === true) {
+      nextStatus = NEXT_STATUS[order.status];
+      if (!nextStatus) {
+        return res.status(400).json({
+          message: 'Order is already Delivered — no further status',
+        });
+      }
+    }
+
+    if (!nextStatus || !VALID_STATUSES.includes(nextStatus)) {
+      return res.status(400).json({
+        message: `Invalid status. Use one of: ${VALID_STATUSES.join(', ')}`,
+      });
+    }
+
+    order.status = nextStatus;
+    const updated = await order.save();
+
+    // Re-populate after save for consistent kitchen UI payload
+    const hydrated = await Order.findById(updated._id).populate('user', 'name email');
+    res.json(hydrated);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error updating order status' });
   }
 };
 
@@ -121,4 +188,7 @@ module.exports = {
   getMyOrders,
   getOrders,
   getOrderById,
+  updateOrderStatus,
+  VALID_STATUSES,
+  NEXT_STATUS,
 };

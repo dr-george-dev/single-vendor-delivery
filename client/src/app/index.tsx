@@ -274,7 +274,7 @@ export default function HomeScreen() {
                 }}
               />
             ) : (
-              <View className="flex-row flex-wrap justify-between">
+              <View className="gap-4 justify-between">
                 {filteredProducts.map((product: any) => (
                   <ProductCard key={product._id} product={product} />
                 ))}

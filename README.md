@@ -1,14 +1,46 @@
 # Single-Vendor Food Delivery App
 
-A full-stack food delivery prototype for a **single restaurant/vendor** (not a multi-restaurant marketplace). Customers browse a menu, build a cart, check out, and track orders.
+A full-stack food delivery prototype for a **single restaurant/vendor** (not a multi-restaurant marketplace). Customers browse a menu, build a cart, check out, and track orders. Kitchens run a live **order board**.
 
 **Stack:** Expo + React Native + NativeWind (frontend) · Node.js + Express + MongoDB (backend) · JWT auth · Zustand state
 
 ---
 
+## Ship to a kitchen (progress)
+
+We are hardening this app so you can **sell it to a real kitchen**. Each step is documented in `/docs` so you never lose the thread.
+
+| Step | Status | Learn more |
+| --- | --- | --- |
+| **1. Kitchen order board** | ✅ Done | [docs/01-kitchen-admin-board.md](./docs/01-kitchen-admin-board.md) |
+| **2. Menu management** | ⬜ Next | [docs/README.md](./docs/README.md) |
+| **3. Payments + production deploy** | ⬜ Later | [docs/README.md](./docs/README.md) |
+
+**Index of all ship docs:** [docs/README.md](./docs/README.md)
+
+### Quick kitchen test (Step 1)
+
+```bash
+# Terminal 1 — API
+cd server && npm run dev
+
+# Terminal 2 — create kitchen login (once)
+cd server && npm run seed:admin
+# → kitchen@demo.com / kitchen123
+
+# Terminal 3 — app
+cd client && npx expo start -c
+```
+
+1. Customer account: place an order.  
+2. Log in as **kitchen@demo.com** → Profile → **Open kitchen board**.  
+3. Advance: Pending → Preparing → Out for Delivery → Delivered.
+
+---
+
 ## Key Features
 
-### Mobile App (Frontend)
+### Customer app (Frontend)
 - **Premium UI/UX** — shared design tokens, press animations, empty/loading/error states
 - **Global state** — cart + auth via Zustand
 - **Authentication** — login/register with SecureStore (native) / localStorage (web)
@@ -16,11 +48,17 @@ A full-stack food delivery prototype for a **single restaurant/vendor** (not a m
 - **Orders** — history list, detail screen with status timeline, reorder
 - **Cross-platform** — iOS, Android, and Web via Expo
 
+### Kitchen ops
+- **Kitchen board** (`/kitchen`) — live tickets, status tabs, one-tap advance
+- **Auto-refresh + new-order alert** — polls every ~12s
+- **Admin-only APIs** — customers cannot list everyone’s orders
+
 ### API Server (Backend)
 - REST routes for Products, Users, Orders
-- JWT-protected private routes + bcrypt password hashing
+- JWT + **role-based** access (`customer` vs `admin`)
 - Mongoose schemas with validation
 - Server recalculates order totals (prevents client price tampering)
+- `npm run seed:admin` — create kitchen staff login
 
 ---
 
@@ -84,7 +122,9 @@ npx expo start -c
 | GET | `/api/users/profile` | Current user | Private |
 | POST | `/api/orders` | Create order | Private |
 | GET | `/api/orders/myorders` | My order history | Private |
-| GET | `/api/orders/:id` | Order detail | Private |
+| GET | `/api/orders/:id` | Order detail | Private (owner or admin) |
+| GET | `/api/orders` | All orders (kitchen board) | **Admin** |
+| PUT | `/api/orders/:id/status` | Advance / set status | **Admin** |
 
 ---
 
@@ -475,12 +515,25 @@ Work these in order — each one trains a real senior habit:
 - Frontend needs the backend reachable from the device/emulator.
 - Physical devices: check LAN IP wiring in `client/src/config/api.ts`.
 - `stripe` is listed in server dependencies; payment is still stubbed (`isPaid: true` on create) — UI can look paid while payment is simulated.
+- Kitchen admin is **not** created via Sign Up. Use `npm run seed:admin` in `/server`.
+- Step-by-step ship docs live in [`/docs`](./docs/README.md) — prefer those over chat history when resuming work.
+
+---
+
+## Documentation map
+
+| Doc | Audience |
+| --- | --- |
+| [README.md](./README.md) (this file) | Overview, setup, UI deep dive |
+| [docs/README.md](./docs/README.md) | Ship roadmap index |
+| [docs/01-kitchen-admin-board.md](./docs/01-kitchen-admin-board.md) | Step 1 deep dive + tests |
+| [ROADMAP.md](./ROADMAP.md) | Original 30-day learning plan |
 
 ---
 
 ## Development philosophy
 
-This project is a learning-friendly prototype with clean frontend/backend separation. The UI upgrade’s goal was not only to “look nicer,” but to practice the same discipline used on real product teams: **design systems, reusable components, resilient states, and intentional motion**.
+This project is a learning-friendly prototype with clean frontend/backend separation. Customer UI upgrades practice **design systems**. Kitchen board upgrades practice **authorization and operations**. Together they move the project from demo → sellable tool.
 
 When you open a PR next time, ask:
 

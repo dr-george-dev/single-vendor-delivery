@@ -4,19 +4,24 @@ const {
   addOrderItems,
   getMyOrders,
   getOrders,
-  getOrderById
+  getOrderById,
+  updateOrderStatus,
 } = require('../controllers/orderController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 
-// Route for creating an order (POST /api/orders) and fetching all orders (GET /api/orders)
-// Note: We'll put our protection middleware on both, but ideally, getOrders should have an admin check too!
-router.route('/')
+// Customer places order | Kitchen lists all orders
+router
+  .route('/')
   .post(protect, addOrderItems)
-  .get(protect, getOrders);
+  .get(protect, admin, getOrders);
 
-// Route for getting the logged-in user's orders (GET /api/orders/myorders)
+// Customer order history (must be registered BEFORE /:id)
 router.route('/myorders').get(protect, getMyOrders);
 
+// Kitchen advances status (must be before bare /:id if you add more sub-routes)
+router.route('/:id/status').put(protect, admin, updateOrderStatus);
+
+// Customer or admin can view a single order
 router.route('/:id').get(protect, getOrderById);
 
 module.exports = router;

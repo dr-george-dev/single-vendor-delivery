@@ -9,17 +9,32 @@ import { IconButton } from '../components/ui/IconButton';
 import { PressableScale } from '../components/ui/PressableScale';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 
-const MENU = [
-  { icon: 'shopping-bag' as const, label: 'My orders', route: '/orders' },
-  { icon: 'map-pin' as const, label: 'Saved addresses', route: null },
-  { icon: 'credit-card' as const, label: 'Payment methods', route: null },
-  { icon: 'bell' as const, label: 'Notifications', route: null },
-  { icon: 'settings' as const, label: 'Settings', route: null },
+type MenuItem = {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  label: string;
+  route: string | null;
+  adminOnly?: boolean;
+};
+
+const MENU: MenuItem[] = [
+  { icon: 'shopping-bag', label: 'My orders', route: '/orders' },
+  {
+    icon: 'monitor',
+    label: 'Kitchen board',
+    route: '/kitchen',
+    adminOnly: true,
+  },
+  { icon: 'map-pin', label: 'Saved addresses', route: null },
+  { icon: 'credit-card', label: 'Payment methods', route: null },
+  { icon: 'bell', label: 'Notifications', route: null },
+  { icon: 'settings', label: 'Settings', route: null },
 ];
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore((state: any) => state);
+  const isAdmin = user?.role === 'admin';
+  const visibleMenu = MENU.filter((item) => !item.adminOnly || isAdmin);
 
   useEffect(() => {
     if (!user) router.replace('/login');
@@ -95,12 +110,33 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Kitchen CTA for admins */}
+        {isAdmin && (
+          <PressableScale onPress={() => router.push('/kitchen')} className="mb-5">
+            <View
+              className="rounded-[24px] p-5 flex-row items-center"
+              style={{ backgroundColor: Brand.ink }}
+            >
+              <View className="w-12 h-12 rounded-2xl bg-white/15 items-center justify-center mr-4">
+                <Feather name="monitor" size={22} color="#fff" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white font-black text-base">Open kitchen board</Text>
+                <Text className="text-white/60 text-xs font-medium mt-0.5">
+                  Live orders · advance status · auto-refresh
+                </Text>
+              </View>
+              <Feather name="arrow-right" size={20} color="#fff" />
+            </View>
+          </PressableScale>
+        )}
+
         {/* Menu */}
         <View
           className="bg-white rounded-[28px] overflow-hidden mb-5"
           style={{ borderWidth: 1, borderColor: Brand.border }}
         >
-          {MENU.map((item, index) => (
+          {visibleMenu.map((item, index) => (
             <PressableScale
               key={item.label}
               onPress={() => {
@@ -111,15 +147,21 @@ export default function ProfileScreen() {
               <View
                 className="flex-row items-center px-4 py-4"
                 style={{
-                  borderBottomWidth: index < MENU.length - 1 ? 1 : 0,
+                  borderBottomWidth: index < visibleMenu.length - 1 ? 1 : 0,
                   borderBottomColor: '#F3F4F6',
                 }}
               >
                 <View
                   className="w-10 h-10 rounded-full items-center justify-center mr-3.5"
-                  style={{ backgroundColor: Brand.bg }}
+                  style={{
+                    backgroundColor: item.adminOnly ? Brand.accentSoft : Brand.bg,
+                  }}
                 >
-                  <Feather name={item.icon} size={18} color={Brand.ink} />
+                  <Feather
+                    name={item.icon}
+                    size={18}
+                    color={item.adminOnly ? Brand.accent : Brand.ink}
+                  />
                 </View>
                 <Text className="flex-1 text-[15px] font-bold text-gray-800">{item.label}</Text>
                 <Feather name="chevron-right" size={18} color={Brand.mutedLight} />
