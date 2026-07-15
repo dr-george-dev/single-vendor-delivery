@@ -1,20 +1,24 @@
-import React, { useState } from "react";
+import { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
   Image,
-  ActivityIndicator,
   Alert,
-  TextInput, // <-- Imported correctly for mobile!
-} from "react-native";
-import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useCartStore } from "../store/cartStore";
-import { useAuthStore } from "../store/authStore";
-import { API_BASE_URL } from "../config/api";
+  TextInput,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+import { useCartStore } from '../store/cartStore';
+import { useAuthStore } from '../store/authStore';
+import { API_BASE_URL } from '../config/api';
+import { Brand } from '../constants/brand';
+import { IconButton } from '../components/ui/IconButton';
+import { QuantityStepper } from '../components/ui/QuantityStepper';
+import { PrimaryButton } from '../components/ui/PrimaryButton';
+import { EmptyState } from '../components/ui/EmptyState';
+import { PressableScale } from '../components/ui/PressableScale';
 
 const API_URL = `${API_BASE_URL}/api/orders`;
 
@@ -22,27 +26,26 @@ export default function CartScreen() {
   const router = useRouter();
   const { items, addItem, removeItem, getSubtotal, clearCart } = useCartStore((state: any) => state);
   const { user, token } = useAuthStore((state: any) => state);
-  
+
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  
-  // --- Issue 4 States ---
-  const [deliveryAddress, setDeliveryAddress] = useState("172 Grand St, NY");
-  const [paymentMethod, setPaymentMethod] = useState("Card");
+  const [deliveryAddress, setDeliveryAddress] = useState('172 Grand St, NY');
+  const [paymentMethod, setPaymentMethod] = useState('Card');
+  const [note, setNote] = useState('');
 
   const subtotal = getSubtotal();
   const deliveryFee = subtotal > 40 || subtotal === 0 ? 0 : 5.0;
   const total = subtotal + deliveryFee;
+  const freeDeliveryLeft = Math.max(0, 40 - subtotal);
 
   const handlePlaceOrder = async () => {
     if (!user || !token) {
-      Alert.alert("Login Required", "Please sign in to place your order.");
-      router.push("/login");
+      Alert.alert('Login Required', 'Please sign in to place your order.');
+      router.push('/login');
       return;
     }
 
-    // Validation for Issue 4 address input
     if (!deliveryAddress.trim()) {
-      Alert.alert("Missing Details", "Please enter a valid delivery address.");
+      Alert.alert('Missing Details', 'Please enter a valid delivery address.');
       return;
     }
 
@@ -57,16 +60,15 @@ export default function CartScreen() {
       }));
 
       const response = await fetch(API_URL, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           orderItems,
-          // Sending the dynamic Issue 4 states
           deliveryAddress: deliveryAddress.trim(),
-          paymentMethod: paymentMethod,
+          paymentMethod,
           subtotal,
           deliveryFee,
           totalPrice: total,
@@ -74,158 +76,237 @@ export default function CartScreen() {
       });
 
       const data = await response.json();
-
-      if (!response.ok)
-        throw new Error(data.message || "Failed to place order");
+      if (!response.ok) throw new Error(data.message || 'Failed to place order');
 
       clearCart();
-      
       router.push({
-        pathname: "/success",
-        params: { orderId: data._id },
+        pathname: '/success',
+        params: { orderId: data._id, address: deliveryAddress.trim() },
       });
     } catch (error: any) {
-      Alert.alert("Checkout Error", error.message || "Something went wrong");
+      Alert.alert('Checkout Error', error.message || 'Something went wrong');
     } finally {
       setIsCheckingOut(false);
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#f4f6f8]">
-      {/* Header */}
-      <View className="px-6 py-4 flex-row items-center justify-between z-10">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm border border-gray-100"
-        >
-          <Feather name="chevron-left" size={24} color="#001f3f" />
-        </TouchableOpacity>
-        <Text className="text-xl font-extrabold text-[#001f3f]">My Cart</Text>
-        <View className="w-10 h-10" />
+    <SafeAreaView className="flex-1" style={{ backgroundColor: Brand.bg }} edges={['top']}>
+      <View className="px-5 py-3 flex-row items-center justify-between">
+        <IconButton name="chevron-left" onPress={() => router.back()} />
+        <Text className="text-lg font-black text-gray-900">Your cart</Text>
+        <View className="w-11" />
       </View>
 
-      <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1 px-5"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 24 }}
+      >
         {items.length === 0 ? (
-          <View className="py-20 items-center justify-center">
-            <Ionicons name="cart-outline" size={64} color="#d1d5db" />
-            <Text className="text-gray-400 text-lg font-medium mt-4">
-              Your cart is empty
-            </Text>
-          </View>
+          <EmptyState
+            icon="shopping-bag"
+            title="Your cart is empty"
+            subtitle="Browse the menu and add something delicious."
+            actionLabel="Explore menu"
+            onAction={() => router.replace('/')}
+          />
         ) : (
-          <View className="mt-4">
-            
-            {/* Cart Items List */}
-            {items.map((item: any) => (
+          <>
+            {/* Free delivery progress */}
+            {freeDeliveryLeft > 0 ? (
               <View
-                key={item._id || item.id}
-                className="flex-row items-center mb-6 bg-white p-3 rounded-3xl border border-gray-100 shadow-sm"
+                className="mb-5 p-4 rounded-2xl"
+                style={{ backgroundColor: Brand.accentSoft, borderWidth: 1, borderColor: '#FFD9C8' }}
               >
-                <View className="bg-white rounded-2xl p-1 mr-4 border border-gray-100 shadow-sm">
-                  <Image
-                    source={{ uri: item.image }}
-                    className="w-14 h-14"
-                    resizeMode="contain"
+                <View className="flex-row items-center mb-2">
+                  <Feather name="truck" size={16} color={Brand.accent} />
+                  <Text className="ml-2 font-bold text-sm" style={{ color: Brand.accentDark }}>
+                    Add ${freeDeliveryLeft.toFixed(2)} more for free delivery
+                  </Text>
+                </View>
+                <View className="h-2 rounded-full bg-white overflow-hidden">
+                  <View
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(100, (subtotal / 40) * 100)}%`,
+                      backgroundColor: Brand.accent,
+                    }}
                   />
                 </View>
+              </View>
+            ) : (
+              <View
+                className="mb-5 p-3.5 rounded-2xl flex-row items-center"
+                style={{ backgroundColor: Brand.successSoft }}
+              >
+                <Feather name="check-circle" size={16} color={Brand.success} />
+                <Text className="ml-2 font-bold text-sm text-emerald-700">
+                  You unlocked free delivery
+                </Text>
+              </View>
+            )}
 
-                <View className="flex-1">
-                  <Text className="text-[15px] font-bold text-[#001f3f] mb-1">
-                    {item.name}
-                  </Text>
-                  <Text className="text-[#f97316] font-extrabold text-sm">
-                    ${item.price.toFixed(2)}
-                  </Text>
-                </View>
+            {/* Line items */}
+            {items.map((item: any) => {
+              const id = item._id || item.id;
+              return (
+                <View
+                  key={id}
+                  className="flex-row items-center mb-3.5 bg-white p-3 rounded-3xl"
+                  style={{ borderWidth: 1, borderColor: Brand.border }}
+                >
+                  <View
+                    className="rounded-2xl p-1.5 mr-3"
+                    style={{ backgroundColor: Brand.bg, borderWidth: 1, borderColor: Brand.border }}
+                  >
+                    <Image source={{ uri: item.image }} className="w-14 h-14" resizeMode="contain" />
+                  </View>
 
-                {/* Minimal Quantity Pill */}
-                <View className="flex-row items-center bg-white rounded-full px-2 py-1 shadow-sm border border-gray-100 ml-2">
-                  <TouchableOpacity
-                    onPress={() =>
-                      item.qty > 1
-                        ? addItem(item, -1)
-                        : removeItem(item._id || item.id)
+                  <View className="flex-1 mr-2">
+                    <Text className="text-[14px] font-extrabold text-gray-900 mb-0.5" numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text className="font-bold text-sm" style={{ color: Brand.accent }}>
+                      ${item.price.toFixed(2)}
+                    </Text>
+                    <PressableScale onPress={() => removeItem(id)} className="mt-1 self-start">
+                      <Text className="text-xs font-semibold text-gray-400">Remove</Text>
+                    </PressableScale>
+                  </View>
+
+                  <QuantityStepper
+                    size="sm"
+                    value={item.qty}
+                    min={0}
+                    onIncrement={() => addItem(item, 1)}
+                    onDecrement={() =>
+                      item.qty > 1 ? addItem(item, -1) : removeItem(id)
                     }
-                    className="px-2"
-                  >
-                    <Feather name="minus" size={14} color="#6b7280" />
-                  </TouchableOpacity>
-                  <Text className="px-2 font-bold text-[#001f3f] text-sm">
-                    {item.qty}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => addItem(item, 1)}
-                    className="px-2"
-                  >
-                    <Feather name="plus" size={14} color="#6b7280" />
-                  </TouchableOpacity>
+                  />
                 </View>
-              </View>
-            ))}
+              );
+            })}
 
-            {/* --- Issue 4: Checkout Form --- */}
-            <View className="mt-4 pt-6 border-t border-gray-200 mb-8">
-              <Text className="text-[#001f3f] font-bold text-base mb-3">Delivery Address</Text>
-              <View className="bg-white rounded-2xl px-4 py-3 flex-row items-center border border-gray-100 shadow-sm mb-6">
-                <Feather name="map-pin" size={18} color="#f97316" className="mr-3" />
-                <TextInput 
-                  value={deliveryAddress}
-                  onChangeText={setDeliveryAddress}
-                  placeholder="Enter delivery address"
-                  className="flex-1 text-base text-gray-800 font-medium"
-                />
+            {/* Delivery */}
+            <Text className="text-gray-900 font-extrabold text-base mt-4 mb-3">Delivery details</Text>
+            <View
+              className="bg-white rounded-2xl px-4 py-3.5 flex-row items-center mb-4"
+              style={{ borderWidth: 1, borderColor: Brand.border }}
+            >
+              <View
+                className="w-9 h-9 rounded-full items-center justify-center mr-3"
+                style={{ backgroundColor: Brand.accentSoft }}
+              >
+                <Feather name="map-pin" size={16} color={Brand.accent} />
               </View>
-
-              <Text className="text-[#001f3f] font-bold text-base mb-3">Payment Method</Text>
-              <View className="flex-row justify-between">
-                <TouchableOpacity 
-                  onPress={() => setPaymentMethod("Card")}
-                  className={`flex-1 flex-row items-center justify-center py-4 rounded-2xl border shadow-sm ${paymentMethod === 'Card' ? 'border-[#f97316] bg-orange-50' : 'border-gray-200 bg-white'} mr-2`}
-                >
-                  <Feather name="credit-card" size={18} color={paymentMethod === 'Card' ? '#f97316' : '#9ca3af'} className="mr-2" />
-                  <Text className={`font-bold ${paymentMethod === 'Card' ? 'text-[#f97316]' : 'text-gray-500'}`}>Card</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  onPress={() => setPaymentMethod("Cash")}
-                  className={`flex-1 flex-row items-center justify-center py-4 rounded-2xl border shadow-sm ${paymentMethod === 'Cash' ? 'border-[#f97316] bg-orange-50' : 'border-gray-200 bg-white'} ml-2`}
-                >
-                  <Feather name="dollar-sign" size={18} color={paymentMethod === 'Cash' ? '#f97316' : '#9ca3af'} className="mr-2" />
-                  <Text className={`font-bold ${paymentMethod === 'Cash' ? 'text-[#f97316]' : 'text-gray-500'}`}>Cash</Text>
-                </TouchableOpacity>
-              </View>
+              <TextInput
+                value={deliveryAddress}
+                onChangeText={setDeliveryAddress}
+                placeholder="Enter delivery address"
+                placeholderTextColor={Brand.mutedLight}
+                className="flex-1 text-[15px] text-gray-800 font-medium"
+              />
             </View>
-            {/* ----------------------------- */}
-            
-          </View>
+
+            <View
+              className="bg-white rounded-2xl px-4 py-3.5 flex-row items-center mb-5"
+              style={{ borderWidth: 1, borderColor: Brand.border }}
+            >
+              <View
+                className="w-9 h-9 rounded-full items-center justify-center mr-3"
+                style={{ backgroundColor: Brand.bg }}
+              >
+                <Feather name="edit-3" size={15} color={Brand.muted} />
+              </View>
+              <TextInput
+                value={note}
+                onChangeText={setNote}
+                placeholder="Add a note for the kitchen (optional)"
+                placeholderTextColor={Brand.mutedLight}
+                className="flex-1 text-[15px] text-gray-800 font-medium"
+              />
+            </View>
+
+            {/* Payment */}
+            <Text className="text-gray-900 font-extrabold text-base mb-3">Payment</Text>
+            <View className="flex-row mb-6">
+              {[
+                { key: 'Card', icon: 'credit-card' as const },
+                { key: 'Cash', icon: 'dollar-sign' as const },
+              ].map((method) => {
+                const active = paymentMethod === method.key;
+                return (
+                  <PressableScale
+                    key={method.key}
+                    onPress={() => setPaymentMethod(method.key)}
+                    className="flex-1"
+                    style={{ marginRight: method.key === 'Card' ? 8 : 0, marginLeft: method.key === 'Cash' ? 8 : 0 }}
+                  >
+                    <View
+                      className="flex-row items-center justify-center py-4 rounded-2xl"
+                      style={{
+                        backgroundColor: active ? Brand.accentSoft : Brand.surface,
+                        borderWidth: 1.5,
+                        borderColor: active ? Brand.accent : Brand.border,
+                      }}
+                    >
+                      <Feather
+                        name={method.icon}
+                        size={17}
+                        color={active ? Brand.accent : Brand.mutedLight}
+                      />
+                      <Text
+                        className="font-extrabold ml-2"
+                        style={{ color: active ? Brand.accent : Brand.muted }}
+                      >
+                        {method.key}
+                      </Text>
+                    </View>
+                  </PressableScale>
+                );
+              })}
+            </View>
+          </>
         )}
       </ScrollView>
 
-      {/* Checkout Footer matching the screenshot */}
       {items.length > 0 && (
-        <View className="p-6 bg-white border-t border-gray-100 shadow-lg">
-          <View className="flex-row justify-between mb-3">
+        <View
+          className="px-5 pt-4 bg-white border-t"
+          style={{
+            borderColor: Brand.border,
+            paddingBottom: 20,
+            shadowColor: '#000',
+            shadowOpacity: 0.06,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: -4 },
+            elevation: 8,
+          }}
+        >
+          <View className="flex-row justify-between mb-2">
             <Text className="text-gray-500 font-medium text-sm">Subtotal</Text>
-            <Text className="text-[#001f3f] font-bold text-sm">${subtotal.toFixed(2)}</Text>
+            <Text className="text-gray-900 font-bold text-sm">${subtotal.toFixed(2)}</Text>
           </View>
-          <View className="flex-row justify-between mb-6">
-            <Text className="text-gray-500 font-medium text-sm">Delivery Fee</Text>
-            <Text className="text-[#001f3f] font-bold text-sm">{deliveryFee === 0 ? "Free" : `$${deliveryFee.toFixed(2)}`}</Text>
+          <View className="flex-row justify-between mb-4">
+            <Text className="text-gray-500 font-medium text-sm">Delivery</Text>
+            <Text
+              className="font-bold text-sm"
+              style={{ color: deliveryFee === 0 ? Brand.success : Brand.ink }}
+            >
+              {deliveryFee === 0 ? 'Free' : `$${deliveryFee.toFixed(2)}`}
+            </Text>
           </View>
-          <TouchableOpacity
-            disabled={isCheckingOut}
+          <View className="flex-row justify-between mb-4 pt-3 border-t border-gray-100">
+            <Text className="text-gray-900 font-extrabold text-base">Total</Text>
+            <Text className="text-gray-900 font-black text-lg">${total.toFixed(2)}</Text>
+          </View>
+          <PrimaryButton
+            label="Place order"
+            rightLabel={`$${total.toFixed(2)}`}
             onPress={handlePlaceOrder}
-            className={`h-14 rounded-full items-center justify-center shadow-sm ${isCheckingOut ? "bg-orange-300" : "bg-orange-500"}`}
-          >
-            {isCheckingOut ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text className="text-white font-bold text-base">
-                Checkout (${total.toFixed(2)})
-              </Text>
-            )}
-          </TouchableOpacity>
+            loading={isCheckingOut}
+          />
         </View>
       )}
     </SafeAreaView>

@@ -1,48 +1,63 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, ActivityIndicator, Animated } from "react-native";
-import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from "../store/authStore";
-import { API_BASE_URL } from "../config/api";
+import { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  ActivityIndicator,
+  Animated,
+  RefreshControl,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+import { useAuthStore } from '../store/authStore';
+import { API_BASE_URL } from '../config/api';
+import { Brand, CATEGORY_META } from '../constants/brand';
+import { ProductCard } from '../components/ProductCard';
+import { FloatingCartBar } from '../components/ui/FloatingCartBar';
+import { PressableScale } from '../components/ui/PressableScale';
+import { EmptyState } from '../components/ui/EmptyState';
 
 const API_URL = `${API_BASE_URL}/api/products`;
-
-const categories = ["Burgers", "Pizza", "Sides", "Combos", "Drinks"];
+const categories = Object.keys(CATEGORY_META);
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { token } = useAuthStore((state: any) => state);
-  
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const { token, user } = useAuthStore((state: any) => state);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Burgers");
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Burgers');
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
     fetchProducts();
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true })
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 60, friction: 10, useNativeDriver: true }),
     ]).start();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      setFetchError(null);
       const response = await fetch(API_URL);
-      if (!response.ok) throw new Error("Failed to fetch");
+      if (!response.ok) throw new Error('Could not load the menu');
       const data = await response.json();
       setProducts(data);
     } catch (err: any) {
       setFetchError(err.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -54,140 +69,222 @@ export default function HomeScreen() {
     });
   }, [products, searchQuery, selectedCategory]);
 
+  const initial = user?.name?.charAt(0)?.toUpperCase() || '?';
+
   return (
-    <SafeAreaView className="flex-1 bg-[#FAFAFA]">
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        
+    <SafeAreaView className="flex-1" style={{ backgroundColor: Brand.bg }} edges={['top']}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 110 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchProducts(true)}
+            tintColor={Brand.accent}
+          />
+        }
+      >
         {/* Header */}
-        <View className="flex-row justify-between items-center px-6 pt-2 pb-6">
-          <View>
-            <Text className="text-gray-400 text-xs mb-1">Deliver to</Text>
+        <View className="flex-row justify-between items-center px-6 pt-2 pb-5">
+          <PressableScale scaleTo={0.98}>
+            <Text className="text-[11px] font-semibold mb-1 tracking-wide uppercase" style={{ color: Brand.mutedLight }}>
+              Deliver to
+            </Text>
             <View className="flex-row items-center">
-              <Text className="text-gray-900 font-bold text-base mr-1">172 Grand St, NY</Text>
-              <Feather name="chevron-down" size={16} color="#111" />
+              <Feather name="map-pin" size={14} color={Brand.accent} />
+              <Text className="text-gray-900 font-extrabold text-[15px] ml-1.5 mr-1">
+                172 Grand St, NY
+              </Text>
+              <Feather name="chevron-down" size={15} color={Brand.ink} />
             </View>
+          </PressableScale>
+
+          <View className="flex-row items-center gap-2">
+            <PressableScale
+              onPress={() => router.push('/orders')}
+              className="w-11 h-11 rounded-full items-center justify-center bg-white"
+              style={{ borderWidth: 1, borderColor: Brand.border }}
+            >
+              <Feather name="clock" size={18} color={Brand.ink} />
+            </PressableScale>
+            <PressableScale
+              onPress={() => router.push(token ? '/profile' : '/login')}
+              className="w-11 h-11 rounded-full items-center justify-center"
+              style={{ backgroundColor: Brand.accentSoft, borderWidth: 1, borderColor: '#FFD9C8' }}
+            >
+              <Text className="text-lg font-black" style={{ color: Brand.accent }}>
+                {token ? initial : '?'}
+              </Text>
+            </PressableScale>
           </View>
-          <TouchableOpacity 
-            onPress={() => router.push(token ? '/profile' : '/login')} 
-            className="w-12 h-12 bg-red-100 rounded-full items-center justify-center border border-red-200"
-          >
-            <Text className="text-xl font-bold text-red-600">Z</Text>
-          </TouchableOpacity>
         </View>
 
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-          
-          {/* Search Bar */}
-          <View className="px-6 mb-6">
-            <View className="bg-white rounded-2xl px-4 py-3.5 flex-row items-center shadow-sm border border-gray-100">
-              <Feather name="search" size={20} color="#9ca3af" />
-              <TextInput 
-                placeholder="Search food, drinks, more..." 
-                placeholderTextColor="#9ca3af"
+          {/* Search */}
+          <View className="px-6 mb-5">
+            <View
+              className="bg-white rounded-2xl px-4 py-3.5 flex-row items-center"
+              style={{
+                borderWidth: 1,
+                borderColor: Brand.border,
+                shadowColor: '#000',
+                shadowOpacity: 0.04,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 2 },
+              }}
+            >
+              <Feather name="search" size={18} color={Brand.mutedLight} />
+              <TextInput
+                placeholder="Search burgers, pizza, drinks..."
+                placeholderTextColor={Brand.mutedLight}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                className="flex-1 text-base text-gray-800 ml-3 font-medium"
+                className="flex-1 text-[15px] text-gray-800 ml-3 font-medium"
               />
+              {searchQuery.length > 0 && (
+                <PressableScale onPress={() => setSearchQuery('')} scaleTo={0.9}>
+                  <Feather name="x-circle" size={18} color={Brand.mutedLight} />
+                </PressableScale>
+              )}
             </View>
           </View>
 
-          {/* Category Pills */}
+          {/* Categories */}
           <View className="mb-6">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24 }}>
-              {categories.map((cat) => (
-                <TouchableOpacity 
-                  key={cat} 
-                  onPress={() => setSelectedCategory(cat)}
-                  className={`mr-4 p-3 rounded-full w-[72px] items-center ${selectedCategory === cat ? 'bg-white shadow-sm border border-gray-100' : ''}`}
-                >
-                  <View className="w-12 h-12 bg-gray-50 rounded-full items-center justify-center mb-2">
-                    <Text className="text-2xl">{cat === "Burgers" ? "🍔" : cat === "Pizza" ? "🍕" : cat === "Sides" ? "🍟" : cat === "Combos" ? "🍱" : "🥤"}</Text>
-                  </View>
-                  <Text className={`font-semibold text-xs ${selectedCategory === cat ? 'text-gray-900' : 'text-gray-400'}`}>{cat}</Text>
-                </TouchableOpacity>
-              ))}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
+            >
+              {categories.map((cat) => {
+                const active = selectedCategory === cat;
+                const meta = CATEGORY_META[cat];
+                return (
+                  <PressableScale
+                    key={cat}
+                    onPress={() => setSelectedCategory(cat)}
+                    scaleTo={0.94}
+                    className="mr-3 items-center"
+                  >
+                    <View
+                      className="w-[72px] py-3 rounded-[22px] items-center"
+                      style={{
+                        backgroundColor: active ? Brand.surface : 'transparent',
+                        borderWidth: active ? 1 : 0,
+                        borderColor: Brand.border,
+                        shadowColor: '#000',
+                        shadowOpacity: active ? 0.06 : 0,
+                        shadowRadius: 8,
+                        shadowOffset: { width: 0, height: 3 },
+                        elevation: active ? 2 : 0,
+                      }}
+                    >
+                      <View
+                        className="w-12 h-12 rounded-full items-center justify-center mb-2"
+                        style={{ backgroundColor: active ? Brand.accentSoft : '#EFECE8' }}
+                      >
+                        <Text className="text-2xl">{meta.emoji}</Text>
+                      </View>
+                      <Text
+                        className="font-bold text-[11px]"
+                        style={{ color: active ? Brand.ink : Brand.mutedLight }}
+                      >
+                        {meta.label}
+                      </Text>
+                    </View>
+                  </PressableScale>
+                );
+              })}
             </ScrollView>
           </View>
 
-          {/* Promo Banner */}
-          <View className="px-6 mb-8">
-            <View className="bg-[#1C1C1C] rounded-[28px] p-6 relative overflow-hidden h-48 justify-center">
-              {/* Optional: Add an absolute Image here for the burger background shown in video */}
+          {/* Promo banner */}
+          <View className="px-6 mb-7">
+            <View
+              className="rounded-[28px] p-6 overflow-hidden min-h-[168px] justify-center"
+              style={{ backgroundColor: Brand.promo }}
+            >
+              <View className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/5" />
+              <View className="absolute -right-4 bottom-0 w-28 h-28 rounded-full bg-white/5" />
+              <View className="absolute right-4 top-6 opacity-90">
+                <Text style={{ fontSize: 64 }}>🍔</Text>
+              </View>
+
               <View className="bg-white/10 self-start px-2.5 py-1 rounded-md mb-3 flex-row items-center">
                 <Text className="text-white text-[10px] font-bold tracking-widest">✦ FIRST ORDER</Text>
               </View>
-              <Text className="text-white text-3xl font-bold w-3/4 mb-1 leading-9">Free delivery on your first order</Text>
-              <Text className="text-gray-400 text-xs mb-4">No code needed, ends tonight</Text>
-              <TouchableOpacity className="bg-white rounded-full self-start px-5 py-2.5 flex-row items-center">
-                <Text className="text-black font-bold text-sm mr-2">Order now</Text>
-                <Feather name="arrow-right" size={16} color="black" />
-              </TouchableOpacity>
+              <Text className="text-white text-[26px] font-black w-[70%] mb-1.5 leading-8">
+                Free delivery on your first order
+              </Text>
+              <Text className="text-white/50 text-xs mb-4 font-medium">No code needed · ends tonight</Text>
+              <PressableScale
+                onPress={() => {
+                  if (filteredProducts[0]?._id) {
+                    router.push(`/product/${filteredProducts[0]._id}`);
+                  }
+                }}
+                className="bg-white rounded-full self-start px-5 py-2.5 flex-row items-center"
+              >
+                <Text className="text-black font-extrabold text-sm mr-2">Order now</Text>
+                <Feather name="arrow-right" size={15} color="black" />
+              </PressableScale>
             </View>
           </View>
 
-          {/* Popular Now Header */}
+          {/* Section header */}
           <View className="px-6 flex-row justify-between items-end mb-4">
-            <Text className="text-xl font-bold text-gray-900">Popular now</Text>
-            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text className="text-red-500 font-semibold text-sm">See all</Text>
-            </TouchableOpacity>
+            <View>
+              <Text className="text-xl font-black text-gray-900">{selectedCategory}</Text>
+              <Text className="text-xs font-medium mt-0.5" style={{ color: Brand.mutedLight }}>
+                {loading ? 'Loading…' : `${filteredProducts.length} dishes`}
+              </Text>
+            </View>
+            <PressableScale>
+              <Text className="font-bold text-sm" style={{ color: Brand.accent }}>
+                See all
+              </Text>
+            </PressableScale>
           </View>
 
-          {/* Product Grid */}
-          <View className="px-6 pb-24">
-            {loading ? <ActivityIndicator size="large" color="#000" /> : (
+          {/* Product grid */}
+          <View className="px-6">
+            {loading ? (
+              <View className="py-16 items-center">
+                <ActivityIndicator size="large" color={Brand.accent} />
+                <Text className="text-gray-400 mt-3 font-medium">Loading menu…</Text>
+              </View>
+            ) : fetchError ? (
+              <EmptyState
+                icon="wifi-off"
+                title="Couldn't load menu"
+                subtitle={fetchError}
+                actionLabel="Try again"
+                onAction={() => fetchProducts()}
+              />
+            ) : filteredProducts.length === 0 ? (
+              <EmptyState
+                icon="search"
+                title="No matches"
+                subtitle={`Nothing in ${selectedCategory} for “${searchQuery || 'your search'}”.`}
+                actionLabel="Clear filters"
+                onAction={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('Burgers');
+                }}
+              />
+            ) : (
               <View className="flex-row flex-wrap justify-between">
                 {filteredProducts.map((product: any) => (
-                  <TouchableOpacity 
-                    key={product._id} 
-                    onPress={() => router.push(`/product/${product._id}`)} 
-                    className="bg-white p-3 rounded-[24px] w-[48%] mb-4 shadow-sm border border-gray-50 relative"
-                  >
-                    {/* Tags & Actions */}
-                    <View className="flex-row justify-between w-full absolute top-3 px-3 z-10">
-                      <View className="bg-[#FFF4E6] px-2 py-0.5 rounded-md self-start">
-                        <Text className="text-orange-500 text-[10px] font-bold">Popular</Text>
-                      </View>
-                      <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Feather name="heart" size={18} color="#D1D5DB" />
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* Image */}
-                    <Image 
-                      source={{ uri: product.image || 'https://via.placeholder.com/150' }} 
-                      className="w-full h-28 mt-6 mb-3 rounded-xl" 
-                      resizeMode="contain" 
-                    />
-                    
-                    {/* Details */}
-                    <Text className="font-bold text-gray-900 text-sm mb-1" numberOfLines={1}>
-                      {product.name || 'Double Smash Burger'}
-                    </Text>
-                    
-                    <View className="flex-row items-center mb-3">
-                      <Ionicons name="star" size={12} color="#F59E0B" />
-                      <Text className="text-gray-600 text-xs font-semibold ml-1 mr-2">{product.rating || '4.9'}</Text>
-                      <Text className="text-gray-400 text-xs font-medium">{product.time || '25 min'}</Text>
-                    </View>
-
-                    {/* Price & Add Button */}
-                    <View className="flex-row justify-between items-center mt-auto">
-                      <Text className="text-gray-900 font-extrabold text-lg">${(product.price || 15.99).toFixed(2)}</Text>
-                      <TouchableOpacity 
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        className="bg-black w-8 h-8 rounded-full items-center justify-center"
-                      >
-                        <Feather name="plus" size={16} color="white" />
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
+                  <ProductCard key={product._id} product={product} />
                 ))}
               </View>
             )}
           </View>
         </Animated.View>
       </ScrollView>
+
+      <FloatingCartBar />
     </SafeAreaView>
   );
 }

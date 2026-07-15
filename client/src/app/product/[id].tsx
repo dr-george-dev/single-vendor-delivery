@@ -1,134 +1,262 @@
-import { useState, useEffect } from "react";
-import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useCartStore } from "../../store/cartStore";
-import { API_BASE_URL } from "../../config/api";
+import { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  ActivityIndicator,
+  Animated,
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { useCartStore } from '../../store/cartStore';
+import { API_BASE_URL } from '../../config/api';
+import { Brand } from '../../constants/brand';
+import { Badge } from '../../components/ui/Badge';
+import { IconButton } from '../../components/ui/IconButton';
+import { QuantityStepper } from '../../components/ui/QuantityStepper';
+import { PrimaryButton } from '../../components/ui/PrimaryButton';
+import { PressableScale } from '../../components/ui/PressableScale';
 
 const API_URL = `${API_BASE_URL}/api/products`;
 
 export default function ProductDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams(); 
+  const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams();
   const addItem = useCartStore((state: any) => state.addItem);
 
-  // New state variables for API data
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
   const [quantity, setQuantity] = useState(1);
+  const [liked, setLiked] = useState(false);
+  const [added, setAdded] = useState(false);
 
-  // Fetch the single product from MongoDB when the screen loads
+  const imageScale = useRef(new Animated.Value(0.85)).current;
+  const contentSlide = useRef(new Animated.Value(40)).current;
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         const response = await fetch(`${API_URL}/${id}`);
-        if (!response.ok) throw new Error("Product not found");
+        if (!response.ok) throw new Error('Product not found');
         const data = await response.json();
         setProduct(data);
+        Animated.parallel([
+          Animated.spring(imageScale, { toValue: 1, tension: 50, friction: 8, useNativeDriver: true }),
+          Animated.spring(contentSlide, { toValue: 0, tension: 50, friction: 9, useNativeDriver: true }),
+        ]).start();
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
-    
+
     if (id) fetchProduct();
   }, [id]);
 
-  const increment = () => setQuantity(prev => prev + 1);
-  const decrement = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
-
   const handleAddToCart = () => {
     addItem(product, quantity);
-    router.push('/cart');
+    setAdded(true);
+    setTimeout(() => {
+      router.push('/cart');
+    }, 280);
   };
 
-  // Loading UI
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color="#f97316" />
-      </SafeAreaView>
+      <View className="flex-1 justify-center items-center" style={{ backgroundColor: Brand.bg }}>
+        <ActivityIndicator size="large" color={Brand.accent} />
+      </View>
     );
   }
 
-  // Error UI
   if (error || !product) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <Text className="text-red-500 font-bold mb-4">Error: {error || "Product not found"}</Text>
-        <TouchableOpacity onPress={() => router.back()} className="bg-orange-500 px-6 py-3 rounded-full">
-          <Text className="text-white font-bold">Go Back</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      <View className="flex-1 justify-center items-center px-8" style={{ backgroundColor: Brand.bg }}>
+        <Feather name="alert-circle" size={40} color={Brand.danger} />
+        <Text className="text-gray-900 font-bold text-lg mt-4 mb-2">Something went wrong</Text>
+        <Text className="text-gray-500 text-center mb-6">{error || 'Product not found'}</Text>
+        <PrimaryButton label="Go back" onPress={() => router.back()} variant="dark" className="px-10" />
+      </View>
     );
   }
 
+  const hasOriginal = !!product.originalPrice && product.originalPrice > product.price;
+  const originalPrice = hasOriginal
+    ? product.originalPrice
+    : Number((product.price * 1.25).toFixed(2));
+  const discount = Math.round(((originalPrice - product.price) / originalPrice) * 100);
+  const lineTotal = product.price * quantity;
+  const tag = product.tags?.[0] || product.category || 'Popular';
+
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Header */}
-      <View className="px-6 py-4 flex-row items-center justify-between z-10">
-        <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
-          <Text className="text-xl">←</Text>
-        </TouchableOpacity>
-        <Text className="text-lg font-bold">Details</Text>
-        <View className="w-10 h-10 bg-red-100 rounded-full items-center justify-center">
-          <Text className="text-red-500">❤️</Text>
-        </View>
+    <View className="flex-1" style={{ backgroundColor: Brand.bg, paddingTop: insets.top }}>
+      {/* Floating header */}
+      <View
+        className="px-5 py-2 flex-row justify-between items-center absolute w-full z-20"
+        style={{ top: insets.top }}
+      >
+        <IconButton name="chevron-down" onPress={() => router.back()} />
+        <PressableScale
+          onPress={() => setLiked(!liked)}
+          scaleTo={0.9}
+          className="w-11 h-11 rounded-full items-center justify-center bg-white"
+          style={{ borderWidth: 1, borderColor: Brand.border }}
+        >
+          <Ionicons
+            name={liked ? 'heart' : 'heart-outline'}
+            size={20}
+            color={liked ? Brand.danger : Brand.ink}
+          />
+        </PressableScale>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="items-center justify-center h-72 bg-gray-50 rounded-b-[40px] shadow-sm mb-6">
-          <Image source={{ uri: product.image }} className="w-56 h-56" resizeMode="contain" />
-        </View>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} bounces>
+        <Animated.View
+          className="w-full h-80 items-center justify-center"
+          style={{ transform: [{ scale: imageScale }] }}
+        >
+          <View className="absolute w-64 h-64 rounded-full bg-white/60" />
+          <Image
+            source={{ uri: product.image || 'https://via.placeholder.com/400' }}
+            className="w-[88%] h-[88%]"
+            resizeMode="contain"
+          />
+        </Animated.View>
 
-        <View className="px-6">
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-3xl font-extrabold text-gray-800 flex-1 mr-4">{product.name}</Text>
-            <View className="flex-row items-center bg-yellow-100 px-3 py-1 rounded-full">
-              <Text className="text-yellow-600 mr-1">⭐</Text>
-              <Text className="font-bold text-yellow-700">{product.rating}</Text>
+        <Animated.View
+          className="px-6 bg-white rounded-t-[36px] pt-7 pb-36"
+          style={{
+            transform: [{ translateY: contentSlide }],
+            borderTopWidth: 1,
+            borderColor: Brand.border,
+            minHeight: 420,
+          }}
+        >
+          <View className="w-10 h-1 rounded-full bg-gray-200 self-center mb-5" />
+
+          <View className="flex-row items-center justify-between mb-3">
+            <Badge label={tag} tone="warning" />
+            <View className="flex-row items-center bg-amber-50 px-2.5 py-1 rounded-full">
+              <Ionicons name="star" size={13} color={Brand.star} />
+              <Text className="font-extrabold text-amber-700 text-xs ml-1">
+                {(product.rating ?? 4.9).toFixed(1)}
+              </Text>
             </View>
           </View>
 
-          <View className="flex-row mt-4 mb-6">
-            <View className="flex-row items-center mr-6">
-              <Text className="text-orange-500 mr-2 text-lg">🔥</Text>
-              <Text className="text-gray-500 font-medium">{product.calories || 'N/A'} Kcal</Text>
-            </View>
-            <View className="flex-row items-center">
-              <Text className="text-orange-500 mr-2 text-lg">⏱️</Text>
-              <Text className="text-gray-500 font-medium">{product.prepTime} min</Text>
+          <Text className="text-[28px] font-black text-gray-900 mb-2 leading-tight">
+            {product.name}
+          </Text>
+
+          <View className="flex-row items-center mb-6">
+            <Text className="text-[26px] font-black mr-3" style={{ color: Brand.accent }}>
+              ${Number(product.price).toFixed(2)}
+            </Text>
+            <Text className="text-base font-bold text-gray-400 line-through mr-2">
+              ${Number(originalPrice).toFixed(2)}
+            </Text>
+            <View className="bg-red-50 px-2 py-0.5 rounded-md">
+              <Text className="text-red-500 font-bold text-[11px]">{discount}% off</Text>
             </View>
           </View>
 
-          <Text className="text-gray-500 leading-6 mb-8 text-base">{product.description}</Text>
-        </View>
+          {/* Metrics */}
+          <View
+            className="flex-row mb-7 rounded-2xl overflow-hidden"
+            style={{ backgroundColor: Brand.bg, borderWidth: 1, borderColor: Brand.border }}
+          >
+            <Metric
+              icon={<Ionicons name="star" size={18} color={Brand.star} />}
+              value={(product.rating ?? 4.9).toFixed(1)}
+              label="Rating"
+            />
+            <View className="w-px bg-gray-200 my-3" />
+            <Metric
+              icon={<Feather name="clock" size={18} color={Brand.ink} />}
+              value={`${product.prepTime ?? 25}`}
+              label="Min"
+            />
+            <View className="w-px bg-gray-200 my-3" />
+            <Metric
+              icon={<Feather name="zap" size={18} color={Brand.accent} />}
+              value={`${product.calories ?? '—'}`}
+              label="Kcal"
+            />
+          </View>
+
+          <Text className="text-base font-extrabold text-gray-900 mb-2">About this dish</Text>
+          <Text className="text-gray-500 leading-6 text-[15px] mb-6">
+            {product.description ||
+              'Freshly prepared with premium ingredients. Made to order and delivered hot.'}
+          </Text>
+
+          {/* Quick extras (visual only for premium feel) */}
+          <Text className="text-base font-extrabold text-gray-900 mb-3">Popular add-ons</Text>
+          <View className="flex-row flex-wrap gap-2 mb-4">
+            {['Extra cheese', 'No onions', 'Spicy sauce'].map((addon) => (
+              <PressableScale
+                key={addon}
+                scaleTo={0.95}
+                className="px-3.5 py-2.5 rounded-full bg-white"
+                style={{ borderWidth: 1, borderColor: Brand.border }}
+              >
+                <Text className="text-sm font-semibold text-gray-700">+ {addon}</Text>
+              </PressableScale>
+            ))}
+          </View>
+        </Animated.View>
       </ScrollView>
 
-      <View className="px-6 pb-8 pt-4 flex-row items-center justify-between border-t border-gray-100 bg-white">
-        <View className="flex-row items-center bg-gray-100 rounded-full px-2 py-1">
-          <TouchableOpacity onPress={decrement} className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm">
-            <Text className="text-2xl font-bold text-gray-600">-</Text>
-          </TouchableOpacity>
-          <Text className="px-4 text-xl font-bold text-gray-800">{quantity}</Text>
-          <TouchableOpacity onPress={increment} className="w-10 h-10 bg-black rounded-full items-center justify-center shadow-sm">
-            <Text className="text-xl font-bold text-white">+</Text>
-          </TouchableOpacity>
+      {/* Sticky footer */}
+      <View
+        className="absolute bottom-0 w-full bg-white px-5 pt-4 flex-row items-center border-t"
+        style={{
+          paddingBottom: Math.max(insets.bottom, 16),
+          borderColor: Brand.border,
+          shadowColor: '#000',
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: -4 },
+          elevation: 12,
+        }}
+      >
+        <QuantityStepper
+          value={quantity}
+          onIncrement={() => setQuantity((q) => q + 1)}
+          onDecrement={() => setQuantity((q) => Math.max(1, q - 1))}
+        />
+        <View className="flex-1 ml-3">
+          <PrimaryButton
+            label={added ? 'Added!' : 'Add to cart'}
+            rightLabel={`$${lineTotal.toFixed(2)}`}
+            onPress={handleAddToCart}
+            variant={added ? 'dark' : 'primary'}
+          />
         </View>
-
-        <TouchableOpacity 
-          onPress={handleAddToCart}
-          className="bg-orange-500 flex-1 ml-6 h-14 rounded-full items-center justify-center flex-row shadow-sm"
-        >
-          <Text className="text-white font-bold text-lg mr-2">Add to Cart</Text>
-          <Text className="text-white font-extrabold text-lg">
-            ${(product.price * quantity).toFixed(2)}
-          </Text>
-        </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
+  );
+}
+
+function Metric({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  label: string;
+}) {
+  return (
+    <View className="flex-1 items-center py-4">
+      <View className="mb-1.5">{icon}</View>
+      <Text className="text-base font-black text-gray-900">{value}</Text>
+      <Text className="text-gray-400 text-[11px] font-medium mt-0.5">{label}</Text>
+    </View>
   );
 }
