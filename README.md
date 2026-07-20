@@ -13,8 +13,8 @@ We are hardening this app so you can **sell it to a real kitchen**. Each step is
 | Step | Status | Learn more |
 | --- | --- | --- |
 | **1. Kitchen order board** | ✅ Done | [docs/01-kitchen-admin-board.md](./docs/01-kitchen-admin-board.md) |
-| **2. Menu management** | ⬜ Next | [docs/README.md](./docs/README.md) |
-| **3. Payments + production deploy** | ⬜ Later | [docs/README.md](./docs/README.md) |
+| **2. Menu management** | ✅ Done | [docs/02-menu-management.md](./docs/02-menu-management.md) |
+| **3. Payments + production deploy** | ⬜ Next | [docs/README.md](./docs/README.md) |
 
 **Index of all ship docs:** [docs/README.md](./docs/README.md)
 
@@ -50,14 +50,17 @@ cd client && npx expo start -c
 
 ### Kitchen ops
 - **Kitchen board** (`/kitchen`) — live tickets, status tabs, one-tap advance
+- **Menu manager** (`/kitchen/menu`) — add/edit products, sold out / restock, delete
 - **Auto-refresh + new-order alert** — polls every ~12s
-- **Admin-only APIs** — customers cannot list everyone’s orders
+- **Admin-only APIs** — customers cannot list everyone’s orders or edit the menu
 
 ### API Server (Backend)
 - REST routes for Products, Users, Orders
 - JWT + **role-based** access (`customer` vs `admin`)
+- Product `isAvailable` flag — sold-out hidden from customer menu
 - Mongoose schemas with validation
 - Server recalculates order totals (prevents client price tampering)
+- Checkout rejects sold-out products
 - `npm run seed:admin` — create kitchen staff login
 
 ---
@@ -115,8 +118,13 @@ npx expo start -c
 
 | Method | Endpoint | Description | Access |
 | --- | --- | --- | --- |
-| GET | `/api/products` | List products | Public |
-| GET | `/api/products/:id` | Product detail | Public |
+| GET | `/api/products` | Customer menu (available only) | Public |
+| GET | `/api/products/admin` | Full catalog incl. sold out | **Admin** |
+| GET | `/api/products/:id` | Product detail | Public* |
+| POST | `/api/products` | Create product | **Admin** |
+| PUT | `/api/products/:id` | Update product | **Admin** |
+| PUT | `/api/products/:id/availability` | Sold out / restock | **Admin** |
+| DELETE | `/api/products/:id` | Delete product | **Admin** |
 | POST | `/api/users` | Register | Public |
 | POST | `/api/users/login` | Login → JWT | Public |
 | GET | `/api/users/profile` | Current user | Private |
@@ -125,6 +133,8 @@ npx expo start -c
 | GET | `/api/orders/:id` | Order detail | Private (owner or admin) |
 | GET | `/api/orders` | All orders (kitchen board) | **Admin** |
 | PUT | `/api/orders/:id/status` | Advance / set status | **Admin** |
+
+\* Sold-out products return 404 to customers; kitchen admin with JWT can still open them for editing.
 
 ---
 
@@ -526,7 +536,8 @@ Work these in order — each one trains a real senior habit:
 | --- | --- |
 | [README.md](./README.md) (this file) | Overview, setup, UI deep dive |
 | [docs/README.md](./docs/README.md) | Ship roadmap index |
-| [docs/01-kitchen-admin-board.md](./docs/01-kitchen-admin-board.md) | Step 1 deep dive + tests |
+| [docs/01-kitchen-admin-board.md](./docs/01-kitchen-admin-board.md) | Step 1 — kitchen order board |
+| [docs/02-menu-management.md](./docs/02-menu-management.md) | Step 2 — menu CRUD + sold out |
 | [ROADMAP.md](./ROADMAP.md) | Original 30-day learning plan |
 
 ---

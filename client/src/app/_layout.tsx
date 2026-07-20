@@ -32,6 +32,8 @@ export default function RootLayout() {
         <Stack.Screen name="order/[id]" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="kitchen/index" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="kitchen/menu/index" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="kitchen/menu/form" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="login" options={{ presentation: 'modal' }} />
         <Stack.Screen name="register" options={{ presentation: 'modal' }} />
         <Stack.Screen name="success" options={{ animation: 'fade' }} />

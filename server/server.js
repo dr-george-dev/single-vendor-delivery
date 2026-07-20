@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors'); // <-- 1. Import CORS middleware
+const path = require('path');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const productRoutes = require('./routes/productRoutes');
@@ -20,6 +21,9 @@ app.use(cors());
 
 // Middleware to parse incoming JSON data
 app.use(express.json());
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Mount the route files to their respective API paths
 app.use('/api/products', productRoutes); 

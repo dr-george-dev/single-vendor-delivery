@@ -1,11 +1,13 @@
 const mongoose = require('mongoose');
 
+const CATEGORIES = ['Burgers', 'Pizza', 'Sides', 'Combos', 'Drinks'];
+
 const productSchema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: [true, 'Please add a product name'],
-      trim: true, // Removes extra spaces at the beginning and end
+      trim: true,
     },
     description: {
       type: String,
@@ -14,15 +16,16 @@ const productSchema = new mongoose.Schema(
     price: {
       type: Number,
       required: [true, 'Please add a current price'],
+      min: [0, 'Price cannot be negative'],
     },
     originalPrice: {
-      type: Number, // Allows you to show discounts (e.g., $19.90 crossed out)
+      type: Number,
+      min: [0, 'Original price cannot be negative'],
     },
     category: {
       type: String,
       required: [true, 'Please select a category'],
-      // We restrict this to the exact categories shown in your home screen screenshot
-      enum: ['Burgers', 'Pizza', 'Sides', 'Combos', 'Drinks'], 
+      enum: CATEGORIES,
     },
     image: {
       type: String,
@@ -32,22 +35,33 @@ const productSchema = new mongoose.Schema(
       type: Number,
       min: [1, 'Rating must be at least 1'],
       max: [5, 'Rating cannot be more than 5'],
-      default: 5.0, // Default to 5 stars for new items
+      default: 5.0,
     },
     prepTime: {
-      type: Number, // Measured in minutes
+      type: Number,
       required: [true, 'Please add estimated preparation time'],
+      min: [1, 'Prep time must be at least 1 minute'],
     },
     calories: {
-      type: Number, // e.g., 895 Kcal
+      type: Number,
     },
     tags: {
-      type: [String], // Array of strings so you can add multiple tags like ['Popular', 'First Order']
+      type: [String],
+      default: [],
+    },
+    /**
+     * Soft "sold out" flag — kitchen can hide items without deleting history.
+     * Public menu only returns isAvailable: true.
+     */
+    isAvailable: {
+      type: Boolean,
+      default: true,
     },
   },
   {
-    timestamps: true, // Automatically track when food items are added or updated
+    timestamps: true,
   }
 );
 
 module.exports = mongoose.model('Product', productSchema);
+module.exports.CATEGORIES = CATEGORIES;

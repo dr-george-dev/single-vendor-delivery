@@ -234,8 +234,26 @@ export default function KitchenBoardScreen() {
               : 'Loading…'}
           </Text>
         </View>
-        <IconButton name="refresh-cw" onPress={() => fetchOrders({ pull: true })} />
+        <View className="flex-row gap-2">
+          <IconButton name="book-open" onPress={() => router.push('/kitchen/menu')} />
+          <IconButton name="refresh-cw" onPress={() => fetchOrders({ pull: true })} />
+        </View>
       </View>
+
+      {/* Quick link to menu manager */}
+      <PressableScale onPress={() => router.push('/kitchen/menu')} className="mx-5 mb-2">
+        <View
+          className="flex-row items-center px-4 py-3 rounded-2xl"
+          style={{ backgroundColor: Brand.surface, borderWidth: 1, borderColor: Brand.border }}
+        >
+          <Feather name="book-open" size={16} color={Brand.accent} />
+          <Text className="ml-2 font-bold text-sm text-gray-800 flex-1">Manage menu</Text>
+          <Text className="text-xs font-medium mr-1" style={{ color: Brand.mutedLight }}>
+            prices · sold out
+          </Text>
+          <Feather name="chevron-right" size={16} color={Brand.mutedLight} />
+        </View>
+      </PressableScale>
 
       {/* Status tabs */}
       <ScrollView

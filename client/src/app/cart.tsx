@@ -233,6 +233,7 @@ export default function CartScreen() {
             <View className="flex-row mb-6">
               {[
                 { key: 'Card', icon: 'credit-card' as const },
+                { key: 'Crypto', icon: 'hash' as const },
                 { key: 'Cash', icon: 'dollar-sign' as const },
               ].map((method) => {
                 const active = paymentMethod === method.key;
@@ -241,10 +242,10 @@ export default function CartScreen() {
                     key={method.key}
                     onPress={() => setPaymentMethod(method.key)}
                     className="flex-1"
-                    style={{ marginRight: method.key === 'Card' ? 8 : 0, marginLeft: method.key === 'Cash' ? 8 : 0 }}
+                    style={{ marginRight: method.key !== 'Cash' ? 8 : 0 }}
                   >
                     <View
-                      className="flex-row items-center justify-center py-4 rounded-2xl"
+                      className="flex-row items-center justify-center py-4 px-3 rounded-2xl"
                       style={{
                         backgroundColor: active ? Brand.accentSoft : Brand.surface,
                         borderWidth: 1.5,

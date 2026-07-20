@@ -24,6 +24,12 @@ const MENU: MenuItem[] = [
     route: '/kitchen',
     adminOnly: true,
   },
+  {
+    icon: 'book-open',
+    label: 'Menu manager',
+    route: '/kitchen/menu',
+    adminOnly: true,
+  },
   { icon: 'map-pin', label: 'Saved addresses', route: null },
   { icon: 'credit-card', label: 'Payment methods', route: null },
   { icon: 'bell', label: 'Notifications', route: null },

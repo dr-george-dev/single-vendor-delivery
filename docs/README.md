@@ -8,8 +8,8 @@ Each numbered doc is one milestone: what we built, why, how it works, and how to
 | Step | Status | Doc |
 | --- | --- | --- |
 | **1. Kitchen / admin order board** | ✅ Done | [01-kitchen-admin-board.md](./01-kitchen-admin-board.md) |
-| **2. Menu management (kitchen CRUD)** | ⬜ Next | _(coming)_ |
-| **3. Payments + production deploy** | ⬜ Later | _(coming)_ |
+| **2. Menu management (kitchen CRUD)** | ✅ Done | [02-menu-management.md](./02-menu-management.md) |
+| **3. Payments + production deploy** | ⬜ Next | _(coming)_ |
 
 ## Earlier work (foundation)
 
@@ -26,4 +26,4 @@ Each numbered doc is one milestone: what we built, why, how it works, and how to
 
 ---
 
-**Current focus:** Step 1 is live. Next up is **menu management** so the kitchen can change prices and sold-out items without a developer.
+**Current focus:** Steps 1–2 are live. Next is **payments + production deploy** so a kitchen can take real orders on a public URL.

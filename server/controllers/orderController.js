@@ -24,6 +24,13 @@ const addOrderItems = async (req, res) => {
         return res.status(404).json({ message: `Product not found with ID: ${item.product}` });
       }
 
+      // Kitchen sold-out items cannot be ordered
+      if (dbProduct.isAvailable === false) {
+        return res.status(400).json({
+          message: `"${dbProduct.name}" is currently unavailable`,
+        });
+      }
+
       const itemPrice = dbProduct.price;
       subtotal += itemPrice * item.qty;
 
