@@ -6,10 +6,23 @@ const Product = require('../models/Product');
 // @access  Private
 const addOrderItems = async (req, res) => {
   try {
-    const { orderItems, deliveryAddress, paymentMethod } = req.body;
+    const { orderItems, paymentMethod } = req.body;
+    const deliveryAddress = typeof req.body.deliveryAddress === 'string'
+      ? req.body.deliveryAddress.trim()
+      : '';
+    const note = typeof req.body.note === 'string' ? req.body.note.trim() : '';
 
-    if (!orderItems || orderItems.length === 0) {
+    if (!Array.isArray(orderItems) || orderItems.length === 0) {
       return res.status(400).json({ message: 'No order items provided' });
+    }
+    if (!deliveryAddress) {
+      return res.status(400).json({ message: 'Delivery address is required' });
+    }
+    if (note.length > 500) {
+      return res.status(400).json({ message: 'Order note cannot exceed 500 characters' });
+    }
+    if (paymentMethod !== undefined && !['Card', 'Cash', 'Crypto'].includes(paymentMethod)) {
+      return res.status(400).json({ message: 'Unsupported payment method' });
     }
 
     // 1. Double-check and calculate prices securely on the server
@@ -18,6 +31,9 @@ const addOrderItems = async (req, res) => {
     const verifiedOrderItems = [];
 
     for (const item of orderItems) {
+      if (!item?.product) {
+        return res.status(400).json({ message: 'Each order item must include a product ID' });
+      }
       const dbProduct = await Product.findById(item.product);
       
       if (!dbProduct) {
@@ -58,7 +74,8 @@ const addOrderItems = async (req, res) => {
       user: req.user._id, // Set by our Auth Middleware
       orderItems: verifiedOrderItems,
       deliveryAddress,
-      paymentMethod,
+      paymentMethod: paymentMethod || 'Card',
+      note: note || undefined,
       subtotal,
       deliveryFee,
       totalPrice,
@@ -72,6 +89,12 @@ const addOrderItems = async (req, res) => {
 
   } catch (error) {
     console.error(error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'One or more product IDs are invalid' });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Server error during order creation' });
   }
 };
@@ -168,12 +191,12 @@ const updateOrderStatus = async (req, res) => {
 
     let nextStatus = req.body.status;
 
-    // One-tap advance: Pending → Preparing → Out for Delivery → Delivered
+    // One-tap advance: Pending â†’ Preparing â†’ Out for Delivery â†’ Delivered
     if (req.body.advance === true) {
       nextStatus = NEXT_STATUS[order.status];
       if (!nextStatus) {
         return res.status(400).json({
-          message: 'Order is already Delivered — no further status',
+          message: 'Order is already Delivered â€” no further status',
         });
       }
     }

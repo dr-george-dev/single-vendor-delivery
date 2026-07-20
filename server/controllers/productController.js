@@ -41,7 +41,9 @@ const pickProductFields = (body) => {
   if (body.image !== undefined) {
     fields.image = String(body.image).trim() || DEFAULT_IMAGE;
   }
-  if (body.prepTime !== undefined && body.prepTime !== '') {
+  if (body.imageId !== undefined) {
+    fields.imageId = String(body.imageId).trim() || undefined;
+  }  if (body.prepTime !== undefined && body.prepTime !== '') {
     const v = Number(body.prepTime);
     fields.prepTime = Number.isFinite(v) ? v : NaN;
   }

@@ -35,6 +35,11 @@ const productSchema = new mongoose.Schema(
     rating: {
       type: Number,
       min: [1, 'Rating must be at least 1'],
+    // Cloudinary public ID, retained so the asset can be managed later.
+    imageId: {
+      type: String,
+      trim: true,
+    },
       max: [5, 'Rating cannot be more than 5'],
       default: 5.0,
     },
@@ -51,7 +56,7 @@ const productSchema = new mongoose.Schema(
       default: [],
     },
     /**
-     * Soft "sold out" flag — kitchen can hide items without deleting history.
+     * Soft "sold out" flag â€” kitchen can hide items without deleting history.
      * Public menu only returns isAvailable: true.
      */
     isAvailable: {

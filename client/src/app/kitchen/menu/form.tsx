@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useAuthStore } from '../../../store/authStore';
 import { API_BASE_URL } from '../../../config/api';
 import { Brand, CATEGORY_META } from '../../../constants/brand';
@@ -24,6 +25,7 @@ import { PressableScale } from '../../../components/ui/PressableScale';
 
 const CATEGORIES = Object.keys(CATEGORY_META);
 const DEFAULT_IMAGE = 'https://cdn-icons-png.flaticon.com/512/3075/3075977.png';
+const CARD_IMAGE_ASPECT_RATIO = 3 / 2;
 
 export default function KitchenMenuFormScreen() {
   const router = useRouter();
@@ -120,6 +122,7 @@ export default function KitchenMenuFormScreen() {
         category,
         // Send the image URL (Cloudinary or external). Keep `imageId` stored separately if needed.
         image: image.trim() || DEFAULT_IMAGE,
+        imageId: imageId || undefined,
         prepTime: Number(prepTime),
         calories: calories === '' ? undefined : Number(calories),
         tags,
@@ -189,95 +192,169 @@ export default function KitchenMenuFormScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 40 }}
         >
-          {/* Image preview */}
-          <View
-            className="items-center py-5 mb-4 rounded-[24px]"
-            style={{ backgroundColor: Brand.surface, borderWidth: 1, borderColor: Brand.border }}
-          >
-            <Image
-              source={{ uri: image || DEFAULT_IMAGE }}
-              className="w-28 h-28"
-              resizeMode="contain"
-            />
-            <Text className="text-xs text-gray-400 mt-2 font-medium">Image preview</Text>
-            <View className="mt-3 w-full px-4">
-              <PrimaryButton
-                label={uploading ? 'Uploading...' : 'Pick & upload image'}
-                onPress={async () => {
-                  if (!token) {
-                    Alert.alert('Not authenticated');
-                    return;
-                  }
+          {/* Image section - Premium upload interface */}
+          <View className="mb-6">
+            <Text className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">
+              Product Image
+            </Text>
 
-                  // Guard: expo-image-picker may be undefined on some platforms (web or Expo Go mismatch)
-                  if (!ImagePicker || !ImagePicker.requestMediaLibraryPermissionsAsync) {
-                    Alert.alert(
-                      'Unsupported',
-                      'Image picker is not available on this platform. Please paste an image URL in the Image URL field instead.'
-                    );
-                    return;
-                  }
+            {/* Image preview card */}
+            <View
+              className="rounded-2xl overflow-hidden mb-3 border-2 border-dashed"
+              style={{ borderColor: Brand.accent, backgroundColor: Brand.surface }}
+            >
+              <View className="bg-gradient-to-br from-gray-50 to-gray-100 aspect-video justify-center items-center">
+                {image && image !== DEFAULT_IMAGE ? (
+                  <Image source={{ uri: image }} className="w-full h-full" resizeMode="cover" />
+                ) : (
+                  <View className="items-center">
+                    <Feather name="image" size={48} color={Brand.mutedLight} />
+                    <Text className="text-gray-400 text-sm mt-2 font-medium">No image selected</Text>
+                  </View>
+                )}
+              </View>
 
-                  try {
-                    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                    if (status !== 'granted') {
-                      Alert.alert('Permission required', 'Permission to access photos is required.');
-                      return;
-                    }
+              {/* Image controls */}
+              <View className="p-3 border-t" style={{ borderTopColor: Brand.border }}>
+                <View className="flex-row gap-2">
+                  <View className="flex-1">
+                    <PrimaryButton
+                      label={uploading ? 'Uploading...' : 'Upload image'}
+                      onPress={async () => {
+                        if (!token) {
+                          Alert.alert('Not authenticated');
+                          return;
+                        }
 
-                    const result = await ImagePicker.launchImageLibraryAsync({
-                      mediaTypes: ['images'],
-                      quality: 0.8,
-                      allowsEditing: true,
-                    });
+                        if (!ImagePicker || !ImagePicker.requestMediaLibraryPermissionsAsync) {
+                          Alert.alert(
+                            'Unsupported',
+                            'Image picker is not available on this platform. Please use the Image URL field instead.'
+                          );
+                          return;
+                        }
 
-                    // Newer expo returns assets array and `canceled` flag.
-                    const r: any = result as any;
-                    if (r.canceled === true || r.cancelled === true) return;
-                    const uri = r.assets?.[0]?.uri ?? r.uri;
-                    if (!uri) return;
+                        try {
+                          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                          if (status !== 'granted') {
+                            Alert.alert('Permission required', 'Permission to access photos is required.');
+                            return;
+                          }
 
-                    setUploading(true);
+                          const result = await ImagePicker.launchImageLibraryAsync({
+                            mediaTypes: ['images'],
+                            quality: 0.8,
+                            allowsEditing: true,
+                          });
 
-                    const formData = new FormData();
-                    const filename = uri.split('/').pop() || `image-${Date.now()}.jpg`;
-                    const match = /\.(\w+)$/.exec(filename);
-                    const type = match ? `image/${match[1]}` : 'image/jpeg';
+                          const r: any = result as any;
+                          if (r.canceled === true || r.cancelled === true) return;
+                          const asset = r.assets?.[0] ?? r;
+                          const uri = asset?.uri;
+                          if (!uri) return;
 
-                    if (Platform.OS === 'web') {
-                      const response = await fetch(uri);
-                      const blob = await response.blob();
-                      formData.append('image', blob, filename);
-                    } else {
-                      // @ts-ignore - React Native FormData file object
-                      formData.append('image', { uri, name: filename, type });
-                    }
+                          setUploading(true);
 
-                    const resp = await fetch(`${API_BASE_URL}/api/products/upload`, {
-                      method: 'POST',
-                      headers: {
-                        Authorization: `Bearer ${token}`,
-                      },
-                      body: formData,
-                    });
+                          const sourceWidth = Number(asset.width);
+                          const sourceHeight = Number(asset.height);
+                          let uploadUri = uri;
+                          if (sourceWidth > 0 && sourceHeight > 0) {
+                            const sourceRatio = sourceWidth / sourceHeight;
+                            const crop = sourceRatio > CARD_IMAGE_ASPECT_RATIO
+                              ? {
+                                  width: Math.round(sourceHeight * CARD_IMAGE_ASPECT_RATIO),
+                                  height: sourceHeight,
+                                  originX: Math.round((sourceWidth - sourceHeight * CARD_IMAGE_ASPECT_RATIO) / 2),
+                                  originY: 0,
+                                }
+                              : {
+                                  width: sourceWidth,
+                                  height: Math.round(sourceWidth / CARD_IMAGE_ASPECT_RATIO),
+                                  originX: 0,
+                                  originY: Math.round((sourceHeight - sourceWidth / CARD_IMAGE_ASPECT_RATIO) / 2),
+                                };
 
-                    const data = await resp.json();
-                    if (!resp.ok) throw new Error(data.message || 'Upload failed');
+                            const cropped = await ImageManipulator.manipulateAsync(
+                              uri,
+                              [{ crop }],
+                              { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG }
+                            );
+                            uploadUri = cropped.uri;
+                          }
 
-                    // server returns { url, public_id }
-                    const url = data.url || data.path || data.location;
-                    const public_id = data.public_id || data.filename;
-                    setImageId(public_id || null);
-                    setImage(url || DEFAULT_IMAGE);
-                    Alert.alert('Uploaded', 'Image uploaded and set for the product.');
-                  } catch (err: any) {
-                    Alert.alert('Upload failed', err.message || String(err));
-                  } finally {
-                    setUploading(false);
-                  }
-                }}
-                loading={uploading}
-              />
+                          const formData = new FormData();
+                          const filename = uploadUri.split('/').pop() || `image-${Date.now()}.jpg`;
+
+                          // React Native FormData - directly append file URI
+                          if (Platform.OS === 'web') {
+                            // Web: fetch as blob
+                            const response = await fetch(uploadUri);
+                            const blob = await response.blob();
+                            formData.append('image', blob, filename);
+                          } else {
+                            // React Native: use file URI directly
+                            formData.append('image', {
+                              uri: uploadUri,
+                              type: 'image/jpeg',
+                              name: filename,
+                            } as any);
+                          }
+
+                          const resp = await fetch(`${API_BASE_URL}/api/products/upload`, {
+                            method: 'POST',
+                            headers: {
+                              Authorization: `Bearer ${token}`,
+                            },
+                            body: formData,
+                          });
+
+                          const data = await resp.json();
+                          if (!resp.ok) throw new Error(data.message || 'Upload failed');
+
+                          const url = data.url || data.path || data.location;
+                          const public_id = data.public_id || data.filename;
+                          setImageId(public_id || null);
+                          setImage(url || DEFAULT_IMAGE);
+                          Alert.alert('Success', '✓ Image uploaded');
+                        } catch (err: any) {
+                          Alert.alert('Upload failed', err.message || String(err));
+                        } finally {
+                          setUploading(false);
+                        }
+                      }}
+                      loading={uploading}
+                    />
+                  </View>
+                  {image && image !== DEFAULT_IMAGE && (
+                    <PressableScale
+                      onPress={() => setImage(DEFAULT_IMAGE)}
+                      className="px-4 items-center justify-center rounded-full"
+                      style={{ backgroundColor: Brand.surface, borderWidth: 1, borderColor: Brand.border }}
+                    >
+                      <Feather name="trash-2" size={18} color={Brand.muted} />
+                    </PressableScale>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* Manual URL input */}
+            <View>
+              <Text className="text-xs font-medium text-gray-600 mb-2">Or paste image URL:</Text>
+              <View
+                className="flex-row items-center px-3 rounded-xl bg-white border"
+                style={{ borderColor: Brand.border }}
+              >
+                <Feather name="link" size={16} color={Brand.muted} />
+                <TextInput
+                  placeholder="https://example.com/image.jpg"
+                  value={image === DEFAULT_IMAGE ? '' : image}
+                  onChangeText={(text) => setImage(text || DEFAULT_IMAGE)}
+                  placeholderTextColor={Brand.mutedLight}
+                  className="flex-1 text-gray-800 font-medium py-3 ml-2"
+                  autoCapitalize="none"
+                />
+              </View>
             </View>
           </View>
 
@@ -339,14 +416,6 @@ export default function KitchenMenuFormScreen() {
               );
             })}
           </View>
-
-          <Field
-            label="Image URL"
-            value={image}
-            onChangeText={setImage}
-            placeholder="https://..."
-            autoCapitalize="none"
-          />
 
           <View className="flex-row gap-3">
             <View className="flex-1">

@@ -69,6 +69,7 @@ export default function CartScreen() {
           orderItems,
           deliveryAddress: deliveryAddress.trim(),
           paymentMethod,
+          note: note.trim() || undefined,
           subtotal,
           deliveryFee,
           totalPrice: total,

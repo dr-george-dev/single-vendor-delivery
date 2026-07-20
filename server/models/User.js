@@ -9,6 +9,8 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, 'Please add an email'],
+      trim: true,
+      lowercase: true,
       unique: true, // Ensures no two users can register with the same email
       match: [
         /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,

@@ -32,6 +32,11 @@ const orderSchema = new mongoose.Schema(
     },
 
     // 4. Payment & Pricing Details
+    note: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Order note cannot exceed 500 characters'],
+    },
     paymentMethod: {
       type: String,
       required: true,
