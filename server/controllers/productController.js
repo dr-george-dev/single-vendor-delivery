@@ -19,11 +19,21 @@ const parseTags = (tags) => {
 const pickProductFields = (body) => {
   const fields = {};
 
+  const parseBoolean = (v) => {
+    if (v === true || v === 'true' || v === 1 || v === '1') return true;
+    if (v === false || v === 'false' || v === 0 || v === '0') return false;
+    return undefined;
+  };
+
   if (body.name !== undefined) fields.name = String(body.name).trim();
   if (body.description !== undefined) fields.description = String(body.description).trim();
-  if (body.price !== undefined) fields.price = Number(body.price);
+  if (body.price !== undefined && body.price !== '') {
+    const v = Number(body.price);
+    fields.price = Number.isFinite(v) ? v : NaN;
+  }
   if (body.originalPrice !== undefined && body.originalPrice !== '' && body.originalPrice !== null) {
-    fields.originalPrice = Number(body.originalPrice);
+    const v = Number(body.originalPrice);
+    fields.originalPrice = Number.isFinite(v) ? v : NaN;
   } else if (body.originalPrice === '' || body.originalPrice === null) {
     fields.originalPrice = undefined;
   }
@@ -31,16 +41,23 @@ const pickProductFields = (body) => {
   if (body.image !== undefined) {
     fields.image = String(body.image).trim() || DEFAULT_IMAGE;
   }
-  if (body.prepTime !== undefined) fields.prepTime = Number(body.prepTime);
+  if (body.prepTime !== undefined && body.prepTime !== '') {
+    const v = Number(body.prepTime);
+    fields.prepTime = Number.isFinite(v) ? v : NaN;
+  }
   if (body.calories !== undefined && body.calories !== '' && body.calories !== null) {
-    fields.calories = Number(body.calories);
+    const v = Number(body.calories);
+    fields.calories = Number.isFinite(v) ? v : NaN;
   }
   if (body.rating !== undefined && body.rating !== '' && body.rating !== null) {
-    fields.rating = Number(body.rating);
+    const v = Number(body.rating);
+    fields.rating = Number.isFinite(v) ? v : NaN;
   }
   if (body.tags !== undefined) fields.tags = parseTags(body.tags);
   if (body.isAvailable !== undefined) {
-    fields.isAvailable = Boolean(body.isAvailable);
+    const parsed = parseBoolean(body.isAvailable);
+    if (parsed !== undefined) fields.isAvailable = parsed;
+    else fields.isAvailable = Boolean(body.isAvailable);
   }
 
   return fields;
@@ -138,6 +155,10 @@ const createProduct = async (req, res) => {
         message: 'Name, description, price, and category are required',
       });
     }
+    // Validate numeric fields parsed above
+    if (!Number.isFinite(fields.price) || fields.price < 0) {
+      return res.status(400).json({ message: 'Price must be a valid non-negative number' });
+    }
     if (fields.prepTime === undefined || Number.isNaN(fields.prepTime)) {
       return res.status(400).json({ message: 'Prep time (minutes) is required' });
     }
@@ -172,6 +193,13 @@ const updateProduct = async (req, res) => {
     }
 
     const fields = pickProductFields(req.body);
+
+    if (fields.price !== undefined && !Number.isFinite(fields.price)) {
+      return res.status(400).json({ message: 'Price must be a valid number' });
+    }
+    if (fields.prepTime !== undefined && !Number.isFinite(fields.prepTime)) {
+      return res.status(400).json({ message: 'Prep time must be a valid number' });
+    }
 
     if (fields.category && !CATEGORIES.includes(fields.category)) {
       return res.status(400).json({

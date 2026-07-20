@@ -31,13 +31,18 @@ const addOrderItems = async (req, res) => {
         });
       }
 
+      const qty = Number(item.qty);
+      if (!Number.isInteger(qty) || qty < 1) {
+        return res.status(400).json({ message: `Invalid quantity for product ${dbProduct._id}` });
+      }
+
       const itemPrice = dbProduct.price;
-      subtotal += itemPrice * item.qty;
+      subtotal += itemPrice * qty;
 
       // Create a snapshot of the item details at purchase time
       verifiedOrderItems.push({
         name: dbProduct.name,
-        qty: item.qty,
+        qty,
         image: dbProduct.image,
         price: itemPrice,
         product: dbProduct._id,
@@ -57,8 +62,9 @@ const addOrderItems = async (req, res) => {
       subtotal,
       deliveryFee,
       totalPrice,
-      isPaid: true, // Assuming card payment went through successfully on the mobile end
-      paidAt: Date.now(),
+      // Payment must be verified by a real provider before marking as paid
+      isPaid: false,
+      paidAt: undefined,
     });
 
     const createdOrder = await order.save();

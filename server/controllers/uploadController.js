@@ -23,7 +23,18 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 // Upload handler: multer-storage-cloudinary already uploads to Cloudinary
 const uploadImage = (req, res) => {
   try {
+    // Guard: Cloudinary configuration must be present
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return res.status(500).json({ message: 'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.' });
+    }
+
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    // Reject non-image uploads early
+    const mimetype = req.file.mimetype || req.file.contentType;
+    if (mimetype && !mimetype.startsWith('image/')) {
+      return res.status(400).json({ message: 'Uploaded file must be an image' });
+    }
 
     // multer-storage-cloudinary sets req.file.path to the uploaded URL and req.file.filename to public_id
     const url = req.file.path || req.file.location || null;

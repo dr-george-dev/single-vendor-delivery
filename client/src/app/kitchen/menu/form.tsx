@@ -80,7 +80,8 @@ export default function KitchenMenuFormScreen() {
         setPrepTime(String(p.prepTime ?? 15));
         setCalories(p.calories != null ? String(p.calories) : '');
         setTags(Array.isArray(p.tags) ? p.tags.join(', ') : '');
-        setIsAvailable(p.isAvailable !== false);
+        // Normalize server boolean (handle string 'false' sent by older clients)
+        setIsAvailable(!(p.isAvailable === false || p.isAvailable === 'false'));
       } catch (err: any) {
         Alert.alert('Error', err.message, [{ text: 'OK', onPress: () => router.back() }]);
       } finally {
@@ -225,7 +226,7 @@ export default function KitchenMenuFormScreen() {
                     }
 
                     const result = await ImagePicker.launchImageLibraryAsync({
-                      mediaTypes: ImagePicker.MediaType.Images,
+                      mediaTypes: ['images'],
                       quality: 0.8,
                       allowsEditing: true,
                     });
@@ -242,8 +243,15 @@ export default function KitchenMenuFormScreen() {
                     const filename = uri.split('/').pop() || `image-${Date.now()}.jpg`;
                     const match = /\.(\w+)$/.exec(filename);
                     const type = match ? `image/${match[1]}` : 'image/jpeg';
-                    // @ts-ignore - React Native FormData file object
-                    formData.append('image', { uri, name: filename, type });
+
+                    if (Platform.OS === 'web') {
+                      const response = await fetch(uri);
+                      const blob = await response.blob();
+                      formData.append('image', blob, filename);
+                    } else {
+                      // @ts-ignore - React Native FormData file object
+                      formData.append('image', { uri, name: filename, type });
+                    }
 
                     const resp = await fetch(`${API_BASE_URL}/api/products/upload`, {
                       method: 'POST',
