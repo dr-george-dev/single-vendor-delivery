@@ -9,8 +9,20 @@ export default function RootLayout() {
   const checkAuth = useAuthStore((state: any) => state.checkAuth);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    let mounted = true;
+    (async () => {
+      try {
+        await checkAuth();
+      } catch (e) {
+        // ignore
+      }
+      // no-op if component unmounted
+      if (!mounted) return;
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [checkAuth]);
 
   return (
     <>

@@ -40,6 +40,7 @@ export default function KitchenMenuFormScreen() {
   const [originalPrice, setOriginalPrice] = useState('');
   const [category, setCategory] = useState('Burgers');
   const [image, setImage] = useState(DEFAULT_IMAGE);
+  const [imageId, setImageId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [prepTime, setPrepTime] = useState('15');
   const [calories, setCalories] = useState('');
@@ -75,6 +76,7 @@ export default function KitchenMenuFormScreen() {
         setOriginalPrice(p.originalPrice != null ? String(p.originalPrice) : '');
         setCategory(p.category || 'Burgers');
         setImage(p.image || DEFAULT_IMAGE);
+        setImageId(p.imageId ?? null);
         setPrepTime(String(p.prepTime ?? 15));
         setCalories(p.calories != null ? String(p.calories) : '');
         setTags(Array.isArray(p.tags) ? p.tags.join(', ') : '');
@@ -115,6 +117,7 @@ export default function KitchenMenuFormScreen() {
         price: Number(price),
         originalPrice: originalPrice === '' ? null : Number(originalPrice),
         category,
+        // Send the image URL (Cloudinary or external). Keep `imageId` stored separately if needed.
         image: image.trim() || DEFAULT_IMAGE,
         prepTime: Number(prepTime),
         calories: calories === '' ? undefined : Number(calories),
@@ -204,6 +207,16 @@ export default function KitchenMenuFormScreen() {
                     Alert.alert('Not authenticated');
                     return;
                   }
+
+                  // Guard: expo-image-picker may be undefined on some platforms (web or Expo Go mismatch)
+                  if (!ImagePicker || !ImagePicker.requestMediaLibraryPermissionsAsync) {
+                    Alert.alert(
+                      'Unsupported',
+                      'Image picker is not available on this platform. Please paste an image URL in the Image URL field instead.'
+                    );
+                    return;
+                  }
+
                   try {
                     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                     if (status !== 'granted') {
@@ -212,13 +225,15 @@ export default function KitchenMenuFormScreen() {
                     }
 
                     const result = await ImagePicker.launchImageLibraryAsync({
-                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      mediaTypes: ImagePicker.MediaType.Images,
                       quality: 0.8,
                       allowsEditing: true,
                     });
 
-                    // Newer expo returns assets array
-                    const uri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
+                    // Newer expo returns assets array and `canceled` flag.
+                    const r: any = result as any;
+                    if (r.canceled === true || r.cancelled === true) return;
+                    const uri = r.assets?.[0]?.uri ?? r.uri;
                     if (!uri) return;
 
                     setUploading(true);
@@ -241,7 +256,11 @@ export default function KitchenMenuFormScreen() {
                     const data = await resp.json();
                     if (!resp.ok) throw new Error(data.message || 'Upload failed');
 
-                    setImage(data.url);
+                    // server returns { url, public_id }
+                    const url = data.url || data.path || data.location;
+                    const public_id = data.public_id || data.filename;
+                    setImageId(public_id || null);
+                    setImage(url || DEFAULT_IMAGE);
                     Alert.alert('Uploaded', 'Image uploaded and set for the product.');
                   } catch (err: any) {
                     Alert.alert('Upload failed', err.message || String(err));

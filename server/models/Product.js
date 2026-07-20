@@ -27,9 +27,10 @@ const productSchema = new mongoose.Schema(
       required: [true, 'Please select a category'],
       enum: CATEGORIES,
     },
+    // Images should be an external URL (e.g., Cloudinary) or any string reference.
     image: {
       type: String,
-      required: [true, 'Please add an image URL'],
+      required: [true, 'Please add an image (URL)'],
     },
     rating: {
       type: Number,

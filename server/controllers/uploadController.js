@@ -1,32 +1,37 @@
-const path = require('path');
 const multer = require('multer');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-const uploadDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Configure Cloudinary from environment variables (CLOUDINARY_URL or individual vars)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/\s+/g, '-');
-    cb(null, `${Date.now()}-${safeName}`);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'single-vendor-delivery/products',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 1200, crop: 'limit' }],
   },
 });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-});
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
+// Upload handler: multer-storage-cloudinary already uploads to Cloudinary
 const uploadImage = (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-    const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    return res.json({ url });
+
+    // multer-storage-cloudinary sets req.file.path to the uploaded URL and req.file.filename to public_id
+    const url = req.file.path || req.file.location || null;
+    const public_id = req.file.filename || req.file.public_id || null;
+
+    return res.json({ url, public_id });
   } catch (error) {
-    console.error(error);
+    console.error('Cloudinary upload failed', error);
     return res.status(500).json({ message: 'Upload failed' });
   }
 };

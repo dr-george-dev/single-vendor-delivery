@@ -46,6 +46,13 @@ const pickProductFields = (body) => {
   return fields;
 };
 
+const makeImageUrl = (_req, imageVal) => {
+  if (!imageVal) return DEFAULT_IMAGE;
+  const s = String(imageVal);
+  if (/^https?:\/\//i.test(s)) return s;
+  return DEFAULT_IMAGE;
+};
+
 // @desc    Fetch products for customer menu (available only)
 // @route   GET /api/products
 // @access  Public
@@ -56,7 +63,12 @@ const getProducts = async (req, res) => {
       category: 1,
       name: 1,
     });
-    res.json(products);
+    const out = products.map((p) => {
+      const obj = p.toObject({ getters: true });
+      obj.image = makeImageUrl(req, obj.image);
+      return obj;
+    });
+    res.json(out);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error fetching products' });
@@ -76,7 +88,12 @@ const getAdminProducts = async (req, res) => {
     if (req.query.available === 'false') filter.isAvailable = false;
 
     const products = await Product.find(filter).sort({ category: 1, name: 1 });
-    res.json(products);
+    const out = products.map((p) => {
+      const obj = p.toObject({ getters: true });
+      obj.image = makeImageUrl(req, obj.image);
+      return obj;
+    });
+    res.json(out);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error fetching admin products' });
@@ -100,7 +117,9 @@ const getProductById = async (req, res) => {
       return res.status(404).json({ message: 'Product is currently unavailable' });
     }
 
-    res.json(product);
+    const obj = product.toObject({ getters: true });
+    obj.image = makeImageUrl(req, obj.image);
+    res.json(obj);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error fetching product' });
