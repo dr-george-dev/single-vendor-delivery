@@ -309,15 +309,29 @@ export default function KitchenMenuFormScreen() {
                           });
 
                           const data = await resp.json();
-                          if (!resp.ok) throw new Error(data.message || 'Upload failed');
+                          if (!resp.ok) {
+                            throw new Error(data.message || 'Upload failed');
+                          }
 
                           const url = data.url || data.path || data.location;
                           const public_id = data.public_id || data.filename;
+                          
+                          if (!url) {
+                            throw new Error('Server did not return an image URL');
+                          }
+
                           setImageId(public_id || null);
-                          setImage(url || DEFAULT_IMAGE);
-                          Alert.alert('Success', '✓ Image uploaded');
+                          setImage(url);
+                          Alert.alert(
+                            'Success',
+                            `✓ Image uploaded\n(${data.storage === 'cloudinary' ? 'Cloud storage' : 'Local storage'})`
+                          );
                         } catch (err: any) {
-                          Alert.alert('Upload failed', err.message || String(err));
+                          console.error('Upload error:', err);
+                          Alert.alert(
+                            'Upload failed',
+                            err.message || 'Check your connection and try again'
+                          );
                         } finally {
                           setUploading(false);
                         }
