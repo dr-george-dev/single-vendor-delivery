@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
-
+ 
 const CATEGORIES = ['Burgers', 'Pizza', 'Sides', 'Combos', 'Drinks'];
-
+ 
 const productSchema = new mongoose.Schema(
   {
     name: {
@@ -27,19 +27,19 @@ const productSchema = new mongoose.Schema(
       required: [true, 'Please select a category'],
       enum: CATEGORIES,
     },
-    // Images should be an external URL (e.g., Cloudinary) or any string reference.
+    // External URL (Cloudinary, etc.) or absolute path from local upload.
     image: {
       type: String,
       required: [true, 'Please add an image (URL)'],
     },
-    rating: {
-      type: Number,
-      min: [1, 'Rating must be at least 1'],
-    // Cloudinary public ID, retained so the asset can be managed later.
+    // Cloudinary public ID (or local filename) so the asset can be managed later.
     imageId: {
       type: String,
       trim: true,
     },
+    rating: {
+      type: Number,
+      min: [1, 'Rating must be at least 1'],
       max: [5, 'Rating cannot be more than 5'],
       default: 5.0,
     },
@@ -56,7 +56,7 @@ const productSchema = new mongoose.Schema(
       default: [],
     },
     /**
-     * Soft "sold out" flag â€” kitchen can hide items without deleting history.
+     * Soft "sold out" flag — kitchen can hide items without deleting history.
      * Public menu only returns isAvailable: true.
      */
     isAvailable: {
@@ -68,6 +68,6 @@ const productSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-
+ 
 module.exports = mongoose.model('Product', productSchema);
 module.exports.CATEGORIES = CATEGORIES;

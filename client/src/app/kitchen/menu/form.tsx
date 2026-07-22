@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,21 +10,21 @@ import {
   Image,
   Switch,
   ActivityIndicator,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
-import { useAuthStore } from '../../../store/authStore';
-import { API_BASE_URL } from '../../../config/api';
-import { Brand, CATEGORY_META } from '../../../constants/brand';
-import { IconButton } from '../../../components/ui/IconButton';
-import { PrimaryButton } from '../../../components/ui/PrimaryButton';
-import { PressableScale } from '../../../components/ui/PressableScale';
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
+import { useAuthStore } from "../../../store/authStore";
+import { API_BASE_URL } from "../../../config/api";
+import { Brand, CATEGORY_META } from "../../../constants/brand";
+import { IconButton } from "../../../components/ui/IconButton";
+import { PrimaryButton } from "../../../components/ui/PrimaryButton";
+import { PressableScale } from "../../../components/ui/PressableScale";
 
 const CATEGORIES = Object.keys(CATEGORY_META);
-const DEFAULT_IMAGE = 'https://cdn-icons-png.flaticon.com/512/3075/3075977.png';
+const DEFAULT_IMAGE = "https://cdn-icons-png.flaticon.com/512/3075/3075977.png";
 const CARD_IMAGE_ASPECT_RATIO = 3 / 2;
 
 export default function KitchenMenuFormScreen() {
@@ -36,27 +36,27 @@ export default function KitchenMenuFormScreen() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [originalPrice, setOriginalPrice] = useState('');
-  const [category, setCategory] = useState('Burgers');
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [originalPrice, setOriginalPrice] = useState("");
+  const [category, setCategory] = useState("Burgers");
   const [image, setImage] = useState(DEFAULT_IMAGE);
   const [imageId, setImageId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [prepTime, setPrepTime] = useState('15');
-  const [calories, setCalories] = useState('');
-  const [tags, setTags] = useState('');
+  const [prepTime, setPrepTime] = useState("15");
+  const [calories, setCalories] = useState("");
+  const [tags, setTags] = useState("");
   const [isAvailable, setIsAvailable] = useState(true);
 
   useEffect(() => {
     if (!user) {
-      router.replace('/login');
+      router.replace("/login");
       return;
     }
-    if (user.role !== 'admin') {
-      Alert.alert('Kitchen only', 'Admin account required.', [
-        { text: 'OK', onPress: () => router.replace('/') },
+    if (user.role !== "admin") {
+      Alert.alert("Kitchen only", "Admin account required.", [
+        { text: "OK", onPress: () => router.replace("/") },
       ]);
     }
   }, [user, router]);
@@ -70,22 +70,26 @@ export default function KitchenMenuFormScreen() {
         const response = await fetch(`${API_BASE_URL}/api/products/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!response.ok) throw new Error('Product not found');
+        if (!response.ok) throw new Error("Product not found");
         const p = await response.json();
-        setName(p.name || '');
-        setDescription(p.description || '');
-        setPrice(String(p.price ?? ''));
-        setOriginalPrice(p.originalPrice != null ? String(p.originalPrice) : '');
-        setCategory(p.category || 'Burgers');
+        setName(p.name || "");
+        setDescription(p.description || "");
+        setPrice(String(p.price ?? ""));
+        setOriginalPrice(
+          p.originalPrice != null ? String(p.originalPrice) : "",
+        );
+        setCategory(p.category || "Burgers");
         setImage(p.image || DEFAULT_IMAGE);
         setImageId(p.imageId ?? null);
         setPrepTime(String(p.prepTime ?? 15));
-        setCalories(p.calories != null ? String(p.calories) : '');
-        setTags(Array.isArray(p.tags) ? p.tags.join(', ') : '');
+        setCalories(p.calories != null ? String(p.calories) : "");
+        setTags(Array.isArray(p.tags) ? p.tags.join(", ") : "");
         // Normalize server boolean (handle string 'false' sent by older clients)
-        setIsAvailable(!(p.isAvailable === false || p.isAvailable === 'false'));
+        setIsAvailable(!(p.isAvailable === false || p.isAvailable === "false"));
       } catch (err: any) {
-        Alert.alert('Error', err.message, [{ text: 'OK', onPress: () => router.back() }]);
+        Alert.alert("Error", err.message, [
+          { text: "OK", onPress: () => router.back() },
+        ]);
       } finally {
         setLoading(false);
       }
@@ -95,20 +99,21 @@ export default function KitchenMenuFormScreen() {
   }, [isEdit, id, token]);
 
   const validate = () => {
-    if (!name.trim()) return 'Name is required';
-    if (!description.trim()) return 'Description is required';
-    if (!price || Number.isNaN(Number(price)) || Number(price) < 0) return 'Valid price is required';
+    if (!name.trim()) return "Name is required";
+    if (!description.trim()) return "Description is required";
+    if (!price || Number.isNaN(Number(price)) || Number(price) < 0)
+      return "Valid price is required";
     if (!prepTime || Number.isNaN(Number(prepTime)) || Number(prepTime) < 1) {
-      return 'Prep time (minutes) is required';
+      return "Prep time (minutes) is required";
     }
-    if (!category) return 'Category is required';
+    if (!category) return "Category is required";
     return null;
   };
 
   const handleSave = async () => {
     const err = validate();
     if (err) {
-      Alert.alert('Check form', err);
+      Alert.alert("Check form", err);
       return;
     }
 
@@ -118,13 +123,14 @@ export default function KitchenMenuFormScreen() {
         name: name.trim(),
         description: description.trim(),
         price: Number(price),
-        originalPrice: originalPrice === '' ? null : Number(originalPrice),
+        originalPrice: originalPrice === "" ? null : Number(originalPrice),
         category,
         // Send the image URL (Cloudinary or external). Keep `imageId` stored separately if needed.
         image: image.trim() || DEFAULT_IMAGE,
-        imageId: imageId || undefined,
+        // null clears a previous Cloudinary/local id when image is reset to default
+        imageId: imageId || null,
         prepTime: Number(prepTime),
-        calories: calories === '' ? undefined : Number(calories),
+        calories: calories === "" ? undefined : Number(calories),
         tags,
         isAvailable,
       };
@@ -132,33 +138,38 @@ export default function KitchenMenuFormScreen() {
       const url = isEdit
         ? `${API_BASE_URL}/api/products/${id}`
         : `${API_BASE_URL}/api/products`;
-      const method = isEdit ? 'PUT' : 'POST';
+      const method = isEdit ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Save failed');
+      if (!response.ok) throw new Error(data.message || "Save failed");
 
-      Alert.alert('Saved', isEdit ? 'Product updated.' : 'Product added to menu.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      Alert.alert(
+        "Saved",
+        isEdit ? "Product updated." : "Product added to menu.",
+        [{ text: "OK", onPress: () => router.back() }],
+      );
     } catch (e: any) {
-      Alert.alert('Save failed', e.message);
+      Alert.alert("Save failed", e.message);
     } finally {
       setSaving(false);
     }
   };
 
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== "admin") {
     return (
-      <SafeAreaView className="flex-1 justify-center items-center" style={{ backgroundColor: Brand.bg }}>
+      <SafeAreaView
+        className="flex-1 justify-center items-center"
+        style={{ backgroundColor: Brand.bg }}
+      >
         <ActivityIndicator color={Brand.accent} />
       </SafeAreaView>
     );
@@ -166,25 +177,32 @@ export default function KitchenMenuFormScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 justify-center items-center" style={{ backgroundColor: Brand.bg }}>
+      <SafeAreaView
+        className="flex-1 justify-center items-center"
+        style={{ backgroundColor: Brand.bg }}
+      >
         <ActivityIndicator size="large" color={Brand.accent} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: Brand.bg }} edges={['top']}>
+    <SafeAreaView
+      className="flex-1"
+      style={{ backgroundColor: Brand.bg }}
+      edges={["top"]}
+    >
       <View className="px-5 py-3 flex-row items-center justify-between">
         <IconButton name="chevron-left" onPress={() => router.back()} />
         <Text className="text-lg font-black text-gray-900">
-          {isEdit ? 'Edit product' : 'New product'}
+          {isEdit ? "Edit product" : "New product"}
         </Text>
         <View className="w-11" />
       </View>
 
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           className="flex-1 px-5"
@@ -201,54 +219,75 @@ export default function KitchenMenuFormScreen() {
             {/* Image preview card */}
             <View
               className="rounded-2xl overflow-hidden mb-3 border-2 border-dashed"
-              style={{ borderColor: Brand.accent, backgroundColor: Brand.surface }}
+              style={{
+                borderColor: Brand.accent,
+                backgroundColor: Brand.surface,
+              }}
             >
               <View className="bg-gradient-to-br from-gray-50 to-gray-100 aspect-video justify-center items-center">
                 {image && image !== DEFAULT_IMAGE ? (
-                  <Image source={{ uri: image }} className="w-full h-full" resizeMode="cover" />
+                  <Image
+                    source={{ uri: image }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                  />
                 ) : (
                   <View className="items-center">
                     <Feather name="image" size={48} color={Brand.mutedLight} />
-                    <Text className="text-gray-400 text-sm mt-2 font-medium">No image selected</Text>
+                    <Text className="text-gray-400 text-sm mt-2 font-medium">
+                      No image selected
+                    </Text>
                   </View>
                 )}
               </View>
 
               {/* Image controls */}
-              <View className="p-3 border-t" style={{ borderTopColor: Brand.border }}>
+              <View
+                className="p-3 border-t"
+                style={{ borderTopColor: Brand.border }}
+              >
                 <View className="flex-row gap-2">
                   <View className="flex-1">
                     <PrimaryButton
-                      label={uploading ? 'Uploading...' : 'Upload image'}
+                      label={uploading ? "Uploading..." : "Upload image"}
                       onPress={async () => {
                         if (!token) {
-                          Alert.alert('Not authenticated');
+                          Alert.alert("Not authenticated");
                           return;
                         }
 
-                        if (!ImagePicker || !ImagePicker.requestMediaLibraryPermissionsAsync) {
+                        if (
+                          !ImagePicker ||
+                          !ImagePicker.requestMediaLibraryPermissionsAsync
+                        ) {
                           Alert.alert(
-                            'Unsupported',
-                            'Image picker is not available on this platform. Please use the Image URL field instead.'
+                            "Unsupported",
+                            "Image picker is not available on this platform. Please use the Image URL field instead.",
                           );
                           return;
                         }
 
                         try {
-                          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                          if (status !== 'granted') {
-                            Alert.alert('Permission required', 'Permission to access photos is required.');
+                          const { status } =
+                            await ImagePicker.requestMediaLibraryPermissionsAsync();
+                          if (status !== "granted") {
+                            Alert.alert(
+                              "Permission required",
+                              "Permission to access photos is required.",
+                            );
                             return;
                           }
 
-                          const result = await ImagePicker.launchImageLibraryAsync({
-                            mediaTypes: ['images'],
-                            quality: 0.8,
-                            allowsEditing: true,
-                          });
+                          const result =
+                            await ImagePicker.launchImageLibraryAsync({
+                              mediaTypes: ["images"],
+                              quality: 0.8,
+                              allowsEditing: true,
+                            });
 
                           const r: any = result as any;
-                          if (r.canceled === true || r.cancelled === true) return;
+                          if (r.canceled === true || r.cancelled === true)
+                            return;
                           const asset = r.assets?.[0] ?? r;
                           const uri = asset?.uri;
                           if (!uri) return;
@@ -260,77 +299,103 @@ export default function KitchenMenuFormScreen() {
                           let uploadUri = uri;
                           if (sourceWidth > 0 && sourceHeight > 0) {
                             const sourceRatio = sourceWidth / sourceHeight;
-                            const crop = sourceRatio > CARD_IMAGE_ASPECT_RATIO
-                              ? {
-                                  width: Math.round(sourceHeight * CARD_IMAGE_ASPECT_RATIO),
-                                  height: sourceHeight,
-                                  originX: Math.round((sourceWidth - sourceHeight * CARD_IMAGE_ASPECT_RATIO) / 2),
-                                  originY: 0,
-                                }
-                              : {
-                                  width: sourceWidth,
-                                  height: Math.round(sourceWidth / CARD_IMAGE_ASPECT_RATIO),
-                                  originX: 0,
-                                  originY: Math.round((sourceHeight - sourceWidth / CARD_IMAGE_ASPECT_RATIO) / 2),
-                                };
+                            const crop =
+                              sourceRatio > CARD_IMAGE_ASPECT_RATIO
+                                ? {
+                                    width: Math.round(
+                                      sourceHeight * CARD_IMAGE_ASPECT_RATIO,
+                                    ),
+                                    height: sourceHeight,
+                                    originX: Math.round(
+                                      (sourceWidth -
+                                        sourceHeight *
+                                          CARD_IMAGE_ASPECT_RATIO) /
+                                        2,
+                                    ),
+                                    originY: 0,
+                                  }
+                                : {
+                                    width: sourceWidth,
+                                    height: Math.round(
+                                      sourceWidth / CARD_IMAGE_ASPECT_RATIO,
+                                    ),
+                                    originX: 0,
+                                    originY: Math.round(
+                                      (sourceHeight -
+                                        sourceWidth / CARD_IMAGE_ASPECT_RATIO) /
+                                        2,
+                                    ),
+                                  };
 
-                            const cropped = await ImageManipulator.manipulateAsync(
-                              uri,
-                              [{ crop }],
-                              { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG }
-                            );
+                            const cropped =
+                              await ImageManipulator.manipulateAsync(
+                                uri,
+                                [{ crop }],
+                                {
+                                  compress: 0.85,
+                                  format: ImageManipulator.SaveFormat.JPEG,
+                                },
+                              );
                             uploadUri = cropped.uri;
                           }
 
                           const formData = new FormData();
-                          const filename = uploadUri.split('/').pop() || `image-${Date.now()}.jpg`;
+                          const filename =
+                            uploadUri.split("/").pop() ||
+                            `image-${Date.now()}.jpg`;
 
                           // React Native FormData - directly append file URI
-                          if (Platform.OS === 'web') {
+                          if (Platform.OS === "web") {
                             // Web: fetch as blob
                             const response = await fetch(uploadUri);
                             const blob = await response.blob();
-                            formData.append('image', blob, filename);
+                            formData.append("image", blob, filename);
                           } else {
                             // React Native: use file URI directly
-                            formData.append('image', {
+                            formData.append("image", {
                               uri: uploadUri,
-                              type: 'image/jpeg',
+                              type: "image/jpeg",
                               name: filename,
                             } as any);
                           }
 
-                          const resp = await fetch(`${API_BASE_URL}/api/products/upload`, {
-                            method: 'POST',
-                            headers: {
-                              Authorization: `Bearer ${token}`,
+                          const resp = await fetch(
+                            `${API_BASE_URL}/api/products/upload`,
+                            {
+                              method: "POST",
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: formData,
                             },
-                            body: formData,
-                          });
+                          );
 
                           const data = await resp.json();
                           if (!resp.ok) {
-                            throw new Error(data.message || 'Upload failed');
+                            throw new Error(data.message || "Upload failed");
                           }
 
                           const url = data.url || data.path || data.location;
                           const public_id = data.public_id || data.filename;
-                          
+
                           if (!url) {
-                            throw new Error('Server did not return an image URL');
+                            throw new Error(
+                              "Server did not return an image URL",
+                            );
                           }
 
                           setImageId(public_id || null);
                           setImage(url);
                           Alert.alert(
-                            'Success',
-                            `✓ Image uploaded\n(${data.storage === 'cloudinary' ? 'Cloud storage' : 'Local storage'})`
+                            "Success",
+                            `✓ Image uploaded\n(${data.storage === "cloudinary" ? "Cloud storage" : "Local storage"})`,
                           );
                         } catch (err: any) {
-                          console.error('Upload error:', err);
+                          console.error("Upload error:", err);
                           Alert.alert(
-                            'Upload failed',
-                            err.message || 'Check your connection and try again'
+                            "Upload failed",
+                            err.message ||
+                              "Check your connection and try again",
                           );
                         } finally {
                           setUploading(false);
@@ -341,9 +406,16 @@ export default function KitchenMenuFormScreen() {
                   </View>
                   {image && image !== DEFAULT_IMAGE && (
                     <PressableScale
-                      onPress={() => setImage(DEFAULT_IMAGE)}
+                      onPress={() => {
+                        setImage(DEFAULT_IMAGE);
+                        setImageId(null);
+                      }}
                       className="px-4 items-center justify-center rounded-full"
-                      style={{ backgroundColor: Brand.surface, borderWidth: 1, borderColor: Brand.border }}
+                      style={{
+                        backgroundColor: Brand.surface,
+                        borderWidth: 1,
+                        borderColor: Brand.border,
+                      }}
                     >
                       <Feather name="trash-2" size={18} color={Brand.muted} />
                     </PressableScale>
@@ -354,7 +426,9 @@ export default function KitchenMenuFormScreen() {
 
             {/* Manual URL input */}
             <View>
-              <Text className="text-xs font-medium text-gray-600 mb-2">Or paste image URL:</Text>
+              <Text className="text-xs font-medium text-gray-600 mb-2">
+                Or paste image URL:
+              </Text>
               <View
                 className="flex-row items-center px-3 rounded-xl bg-white border"
                 style={{ borderColor: Brand.border }}
@@ -362,8 +436,12 @@ export default function KitchenMenuFormScreen() {
                 <Feather name="link" size={16} color={Brand.muted} />
                 <TextInput
                   placeholder="https://example.com/image.jpg"
-                  value={image === DEFAULT_IMAGE ? '' : image}
-                  onChangeText={(text) => setImage(text || DEFAULT_IMAGE)}
+                  value={image === DEFAULT_IMAGE ? "" : image}
+                  onChangeText={(text) => {
+                    setImage(text || DEFAULT_IMAGE);
+                    // Manual URL is not a server-managed upload — drop prior asset id
+                    setImageId(null);
+                  }}
                   placeholderTextColor={Brand.mutedLight}
                   className="flex-1 text-gray-800 font-medium py-3 ml-2"
                   autoCapitalize="none"
@@ -372,7 +450,12 @@ export default function KitchenMenuFormScreen() {
             </View>
           </View>
 
-          <Field label="Name *" value={name} onChangeText={setName} placeholder="e.g. BBQ Smash Burger" />
+          <Field
+            label="Name *"
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g. BBQ Smash Burger"
+          />
           <Field
             label="Description *"
             value={description}
@@ -409,7 +492,11 @@ export default function KitchenMenuFormScreen() {
             {CATEGORIES.map((cat) => {
               const active = category === cat;
               return (
-                <PressableScale key={cat} onPress={() => setCategory(cat)} scaleTo={0.96}>
+                <PressableScale
+                  key={cat}
+                  onPress={() => setCategory(cat)}
+                  scaleTo={0.96}
+                >
                   <View
                     className="px-3.5 py-2.5 rounded-full flex-row items-center"
                     style={{
@@ -421,7 +508,7 @@ export default function KitchenMenuFormScreen() {
                     <Text className="mr-1">{CATEGORY_META[cat]?.emoji}</Text>
                     <Text
                       className="text-sm font-bold"
-                      style={{ color: active ? '#fff' : Brand.ink }}
+                      style={{ color: active ? "#fff" : Brand.ink }}
                     >
                       {cat}
                     </Text>
@@ -464,7 +551,9 @@ export default function KitchenMenuFormScreen() {
             style={{ borderWidth: 1, borderColor: Brand.border }}
           >
             <View className="flex-1 mr-3">
-              <Text className="font-extrabold text-gray-900">Available on menu</Text>
+              <Text className="font-extrabold text-gray-900">
+                Available on menu
+              </Text>
               <Text className="text-xs text-gray-400 mt-0.5">
                 Off = sold out (hidden from customers)
               </Text>
@@ -472,13 +561,13 @@ export default function KitchenMenuFormScreen() {
             <Switch
               value={isAvailable}
               onValueChange={setIsAvailable}
-              trackColor={{ false: '#E5E7EB', true: '#FDBA74' }}
-              thumbColor={isAvailable ? Brand.accent : '#f4f3f4'}
+              trackColor={{ false: "#E5E7EB", true: "#FDBA74" }}
+              thumbColor={isAvailable ? Brand.accent : "#f4f3f4"}
             />
           </View>
 
           <PrimaryButton
-            label={isEdit ? 'Save changes' : 'Create product'}
+            label={isEdit ? "Save changes" : "Create product"}
             onPress={handleSave}
             loading={saving}
             icon={<Feather name="check" size={18} color="#fff" />}
@@ -504,9 +593,13 @@ function Field({
       </Text>
       <TextInput
         className={`bg-white rounded-2xl px-4 text-[15px] text-gray-800 font-medium ${
-          multiline ? 'py-3.5 min-h-[96px]' : 'py-3.5'
+          multiline ? "py-3.5 min-h-[96px]" : "py-3.5"
         }`}
-        style={{ borderWidth: 1, borderColor: Brand.border, textAlignVertical: multiline ? 'top' : 'center' }}
+        style={{
+          borderWidth: 1,
+          borderColor: Brand.border,
+          textAlignVertical: multiline ? "top" : "center",
+        }}
         placeholderTextColor={Brand.mutedLight}
         multiline={multiline}
         {...props}
